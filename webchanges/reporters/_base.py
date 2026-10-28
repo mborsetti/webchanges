@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 from zoneinfo import ZoneInfo
 
 from webchanges import __project_name__, __url__, __version__
+from webchanges._httpx import Headers, h2, httpx2
 from webchanges.jobs import UrlJob
 from webchanges.util import TrackSubClasses, chunk_string, dur_text, mark_to_html, missing_dependency
 
@@ -59,30 +60,17 @@ if TYPE_CHECKING:
         | _ConfigReportXmpp
     )
 
-# https://stackoverflow.com/questions/712791
-try:
-    import httpx
-    from httpx import Headers, Response
-except ImportError:  # pragma: no cover
-    # The assignment is hidden from the type checker so that `httpx` keeps its module type (see webchanges/jobs/
-    # _url.py for the full explanation).
-    if not TYPE_CHECKING:
-        httpx = None
+if httpx2 is not None:
+    Response = httpx2.Response
+else:  # pragma: no cover
     try:
         import requests
         from requests import Response
-
-        from webchanges._vendored.headers import Headers
-    except ImportError as e:  # pragma: no cover
+    except ImportError as e:
         raise RuntimeError(
-            f"A Python HTTP client package (either 'httpx' or 'requests') is required to run {__project_name__}; "
-            'neither can be imported.'
+            f"A Python HTTP client package (either 'httpx2', 'httpx' or 'requests') is required to run "
+            f'{__project_name__}; none can be imported.'
         ) from e
-if httpx is not None:
-    try:
-        import h2
-    except ImportError:  # pragma: no cover
-        h2 = None
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +84,7 @@ __all__ = [
     'TextReporter',
     'chunk_string',
     'filter_by_tags',
-    'httpx',
+    'httpx2',
     'reporter_configs',
 ]
 
@@ -173,8 +161,8 @@ class ReporterBase(metaclass=TrackSubClasses):
             self.footer_job_file = f' ({", ".join(f.stem for f in jobs_files)})'
         else:
             self.footer_job_file = ''
-        if httpx:  # ty: ignore[redundant-condition]
-            self.http_client = httpx.Client(http2=h2 is not None, follow_redirects=True)
+        if httpx2:  # ty: ignore[redundant-condition]
+            self.http_client = httpx2.Client(http2=h2 is not None, follow_redirects=True)
         else:
             self.http_client = requests.Session()
 

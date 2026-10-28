@@ -1,11 +1,12 @@
 """
-Vendored version of httpx.Headers class from httpx v0.28.1 released on 06-Dec-24
-https://github.com/encode/httpx/releases/tag/0.28.1.
-(code https://github.com/encode/httpx/blob/26d48e0634e6ee9cdc0533996db289ce4b430177/httpx/_models.py).
+Vendored version of the httpx2.Headers class from httpx2 v2.16.0 released on 2026-10-21
+https://github.com/pydantic/httpx2/releases/tag/v2.16.0.
+(code https://github.com/pydantic/httpx2/tree/6bfbf296bd87891287b3b0335493c7317be4ef18/src/httpx2/httpx2).
 
-Allows us to load this class in case httpx is not installed.
+Allows us to load this class in case neither httpx2 nor httpx is installed.
 """
 
+# Copyright © 2026 to present Pydantic Services Inc. and individual contributors.
 # Copyright © 2019, [Encode OSS Ltd](https://www.encode.io/).
 # All rights reserved.
 #
@@ -32,16 +33,21 @@ Allows us to load this class in case httpx is not installed.
 from __future__ import annotations
 
 import typing
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from typing import Union
 
-# from https://github.com/encode/httpx/blob/master/httpx/_types.py
-HeaderTypes: typing.TypeAlias = (
-    'Headers | typing.Mapping[str, str] | typing.Mapping[bytes, bytes] | typing.Sequence[tuple[str, str]] | typing.Sequence[tuple[bytes, bytes]]'
-)
+# from https://github.com/pydantic/httpx2/blob/6bfbf296bd87891287b3b0335493c7317be4ef18/src/httpx2/httpx2/_types.py
+HeaderTypes = Union[
+    "Headers",
+    Mapping[str, str],
+    Mapping[bytes, bytes],
+    Sequence[tuple[str, str]],
+    Sequence[tuple[bytes, bytes]],
+]
 
 
-# from https://github.com/encode/httpx/blob/master/httpx/_utils.py
-def to_str(value: str | bytes, encoding: str = 'utf-8') -> str:
+# from https://github.com/pydantic/httpx2/blob/6bfbf296bd87891287b3b0335493c7317be4ef18/src/httpx2/httpx2/_utils.py
+def to_str(value: str | bytes, encoding: str = "utf-8") -> str:
     return value if isinstance(value, str) else value.decode(encoding)
 
 
@@ -49,17 +55,17 @@ def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:
     return value if isinstance(match_type_of, str) else value.encode()  # ty:ignore[invalid-return-type]
 
 
-# from https://github.com/encode/httpx/blob/master/httpx/_models.py
-SENSITIVE_HEADERS = {'authorization', 'proxy-authorization'}
+# from https://github.com/pydantic/httpx2/blob/6bfbf296bd87891287b3b0335493c7317be4ef18/src/httpx2/httpx2/_models.py
+SENSITIVE_HEADERS = {"authorization", "proxy-authorization"}
+
+_T = typing.TypeVar("_T")
 
 
 def _normalize_header_key(key: str | bytes, encoding: str | None = None) -> bytes:
     """
     Coerce str/bytes into a strictly byte-wise HTTP header key.
     """
-    return (
-        key if isinstance(key, bytes) else key.encode(encoding or 'ascii')
-    )
+    return key if isinstance(key, bytes) else key.encode(encoding or "ascii")
 
 
 def _normalize_header_value(value: str | bytes, encoding: str | None = None) -> bytes:
@@ -69,8 +75,8 @@ def _normalize_header_value(value: str | bytes, encoding: str | None = None) -> 
     if isinstance(value, bytes):
         return value
     if not isinstance(value, str):
-        raise TypeError(f'Header value must be str or bytes, not {type(value)}')
-    return value.encode(encoding or 'ascii')
+        raise TypeError(f"Header value must be str or bytes, not {type(value)}")
+    return value.encode(encoding or "ascii")
 
 
 def _obfuscate_sensitive_headers(
@@ -78,7 +84,7 @@ def _obfuscate_sensitive_headers(
 ) -> typing.Iterator[tuple[typing.AnyStr, typing.AnyStr]]:
     for k, v in items:
         if to_str(k.lower()) in SENSITIVE_HEADERS:
-            v = to_bytes_or_str('[secure]', match_type_of=v)
+            v = to_bytes_or_str("[secure]", match_type_of=v)
         yield k, v
 
 
@@ -116,7 +122,7 @@ class Headers(typing.MutableMapping[str, str]):
         or iso-8859-1.
         """
         if self._encoding is None:
-            for encoding in ['ascii', 'utf-8']:
+            for encoding in ["ascii", "utf-8"]:
                 for key, value in self.raw:
                     try:
                         key.decode(encoding)
@@ -131,7 +137,7 @@ class Headers(typing.MutableMapping[str, str]):
             else:
                 # The ISO-8859-1 encoding covers all 256 code points in a byte,
                 # so will never raise decode errors.
-                self._encoding = 'iso-8859-1'
+                self._encoding = "iso-8859-1"
         return self._encoding
 
     @encoding.setter
@@ -146,7 +152,7 @@ class Headers(typing.MutableMapping[str, str]):
         return [(raw_key, value) for raw_key, _, value in self._list]
 
     def keys(self) -> typing.KeysView[str]:
-        return {key.decode(self.encoding): None for _, key, value in self._list}.keys()
+        return {key.decode(self.encoding): None for _, key, _value in self._list}.keys()
 
     def values(self) -> typing.ValuesView[str]:
         values_dict: dict[str, str] = {}
@@ -154,7 +160,7 @@ class Headers(typing.MutableMapping[str, str]):
             str_key = key.decode(self.encoding)
             str_value = value.decode(self.encoding)
             if str_key in values_dict:
-                values_dict[str_key] += f', {str_value}'
+                values_dict[str_key] += f", {str_value}"
             else:
                 values_dict[str_key] = str_value
         return values_dict.values()
@@ -169,7 +175,7 @@ class Headers(typing.MutableMapping[str, str]):
             str_key = key.decode(self.encoding)
             str_value = value.decode(self.encoding)
             if str_key in values_dict:
-                values_dict[str_key] += f', {str_value}'
+                values_dict[str_key] += f", {str_value}"
             else:
                 values_dict[str_key] = str_value
         return values_dict.items()
@@ -182,7 +188,13 @@ class Headers(typing.MutableMapping[str, str]):
         """
         return [(key.decode(self.encoding), value.decode(self.encoding)) for _, key, value in self._list]
 
-    def get(self, key: str, default: typing.Any = None) -> typing.Any:  # ty:ignore[invalid-method-override]
+    @typing.overload
+    def get(self, key: str, /) -> str | None: ...
+
+    @typing.overload
+    def get(self, key: str, default: _T) -> str | _T: ...
+
+    def get(self, key: str, default: _T | None = None) -> str | _T | None:  # ty:ignore[invalid-method-override]
         """
         Return a header value. If multiple occurrences of the header occur
         then concatenate them together with commas.
@@ -209,12 +221,12 @@ class Headers(typing.MutableMapping[str, str]):
         if not split_commas:
             return values
 
-        split_values = []
+        split_values: list[str] = []
         for value in values:
-            split_values.extend([item.strip() for item in value.split(',')])
+            split_values.extend([item.strip() for item in value.split(",")])
         return split_values
 
-    def update(self, headers: HeaderTypes | None = None) -> None:  # ty:ignore[invalid-method-override]
+    def update(self, headers: HeaderTypes | None = None) -> None:  # type: ignore
         headers = Headers(headers)
         for key in headers.keys():
             if key in self:
@@ -223,6 +235,24 @@ class Headers(typing.MutableMapping[str, str]):
 
     def copy(self) -> Headers:
         return Headers(self, encoding=self.encoding)
+
+    def __or__(self, other: Mapping[str, str]) -> Headers:
+        if not isinstance(other, Mapping):
+            return NotImplemented
+        merged = self.copy()
+        merged.update(other)
+        return merged
+
+    def __ror__(self, other: Mapping[str, str]) -> Headers:
+        if not isinstance(other, Mapping):
+            return NotImplemented
+        merged = Headers(other)
+        merged.update(self)
+        return merged
+
+    def __ior__(self, other: HeaderTypes) -> Headers:
+        self.update(other)
+        return self
 
     def __getitem__(self, key: str) -> str:
         """
@@ -240,7 +270,7 @@ class Headers(typing.MutableMapping[str, str]):
         ]
 
         if items:
-            return ', '.join(items)
+            return ", ".join(items)
 
         raise KeyError(key)
 
@@ -249,8 +279,8 @@ class Headers(typing.MutableMapping[str, str]):
         Set the header `key` to `value`, removing any duplicate entries.
         Retains insertion order.
         """
-        set_key = key.encode(self._encoding or 'utf-8')
-        set_value = value.encode(self._encoding or 'utf-8')
+        set_key = key.encode(self._encoding or "utf-8")
+        set_value = value.encode(self._encoding or "utf-8")
         lookup_key = set_key.lower()
 
         found_indexes = [idx for idx, (_, item_key, _) in enumerate(self._list) if item_key == lookup_key]
@@ -301,14 +331,14 @@ class Headers(typing.MutableMapping[str, str]):
     def __repr__(self) -> str:
         class_name = self.__class__.__name__
 
-        encoding_str = ''
-        if self.encoding != 'ascii':
-            encoding_str = f', encoding={self.encoding!r}'
+        encoding_str = ""
+        if self.encoding != "ascii":
+            encoding_str = f", encoding={self.encoding!r}"
 
         as_list = list(_obfuscate_sensitive_headers(self.multi_items()))
         as_dict = dict(as_list)
 
         no_duplicate_keys = len(as_dict) == len(as_list)
         if no_duplicate_keys:
-            return f'{class_name}({as_dict!r}{encoding_str})'
-        return f'{class_name}({as_list!r}{encoding_str})'
+            return f"{class_name}({as_dict!r}{encoding_str})"
+        return f"{class_name}({as_list!r}{encoding_str})"

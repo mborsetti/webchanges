@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from zoneinfo import ZoneInfo
 
-import httpx
+import httpx2
 import pytest
 
 from webchanges import differs
@@ -1581,12 +1581,12 @@ def test_wdiff(
 _AI_GOOGLE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
 
 
-def _make_response(status_code: int, *, json_data: object | None = None, text: str | None = None) -> httpx.Response:
-    """Build an httpx.Response with an attached request (so ``response.url`` works)."""
-    request = httpx.Request('POST', _AI_GOOGLE_URL)
+def _make_response(status_code: int, *, json_data: object | None = None, text: str | None = None) -> httpx2.Response:
+    """Build an httpx2.Response with an attached request (so ``response.url`` works)."""
+    request = httpx2.Request('POST', _AI_GOOGLE_URL)
     if json_data is not None:
-        return httpx.Response(status_code, json=json_data, request=request)
-    return httpx.Response(status_code, text=text or '', request=request)
+        return httpx2.Response(status_code, json=json_data, request=request)
+    return httpx2.Response(status_code, text=text or '', request=request)
 
 
 class _FakeJob:
@@ -1596,13 +1596,13 @@ class _FakeJob:
 
 
 class _FakeClient:
-    """Minimal stand-in for httpx.Client that returns queued responses in order."""
+    """Minimal stand-in for httpx2.Client that returns queued responses in order."""
 
-    def __init__(self, responses: list[httpx.Response]) -> None:
+    def __init__(self, responses: list[httpx2.Response]) -> None:
         self._responses = responses
         self.calls = 0
 
-    def post(self, url: str, **kwargs: object) -> httpx.Response:
+    def post(self, url: str, **kwargs: object) -> httpx2.Response:
         self.calls += 1
         return self._responses.pop(0)
 
@@ -1755,9 +1755,9 @@ def test_ai_google_send_to_model_429_summary_reports_retries(monkeypatch: pytest
     monkeypatch.setattr(differs.time, 'sleep', lambda secs: None)
     job = JobBase.unserialize({'url': 'https://example.com', 'differ': {'name': 'ai_google'}})
 
-    def run(responses: list[httpx.Response]) -> str:
+    def run(responses: list[httpx2.Response]) -> str:
         client = _FakeClient(responses)
-        monkeypatch.setattr(differs.httpx, 'Client', lambda **kwargs: contextlib.nullcontext(client))
+        monkeypatch.setattr(differs.httpx2, 'Client', lambda **kwargs: contextlib.nullcontext(client))
         summary, _ = AIGoogleDiffer._send_to_model(job, 'system', 'prompt')
         return summary
 

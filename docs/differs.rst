@@ -201,9 +201,9 @@ text and the other half for the new text. They are also offered with a free tier
    API Key, which you obtain `here <https://aistudio.google.com/app/apikey>`__ and which itself requires a `Google
    Cloud <https://cloud.google.com/>`__ account.
 
-.. important:: Requires the `httpx <https://www.python-httpx.org/>`__ HTTP client library, which is installed with
-   :program:`webchanges`. If it has been removed, :program:`webchanges` otherwise runs on ``requests`` (or
-   ``curl_cffi``), but this differ cannot: it reports that ``httpx`` cannot be imported.
+.. important:: Requires the `httpx2 <https://github.com/pydantic/httpx2>`__ HTTP client library, which is installed
+   with :program:`webchanges` (or, temporarily, its predecessor ``httpx``). If neither is installed, :program:`webchanges` otherwise
+   runs on ``requests`` (or ``curl_cffi``), but this differ cannot: it reports that ``httpx2`` cannot be imported.
 
 .. warning::
    Gemini offers **free** use for developers for feedback and testing only (no production use; your data is
@@ -700,12 +700,12 @@ follows:
 
    uv pip install --upgrade webchanges[imagediff]
 
-To download images from a URL, this differ uses the ``httpx`` HTTP client library installed with
-:program:`webchanges` or, if it has been removed, ``requests`` or ``curl_cffi``. Its ``ai_google`` sub-directive,
-however, requires ``httpx`` (see :ref:`ai_google_diff`).
+To download images from a URL, this differ uses the ``httpx2`` HTTP client library installed with
+:program:`webchanges` or, if it has been removed, ``requests`` or ``curl_cffi``. Its ``ai_google``
+sub-directive, however, requires ``httpx2`` (see :ref:`ai_google_diff`).
 
 .. versionchanged:: 3.38
-   Images can be downloaded with ``requests`` or ``curl_cffi`` when ``httpx`` is not installed.
+   Images can be downloaded with ``requests`` or ``curl_cffi`` when ``httpx2`` is not installed.
 
 
 

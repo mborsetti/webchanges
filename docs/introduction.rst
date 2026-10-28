@@ -32,7 +32,7 @@ Data flows through five stages: **Job → filters → differ → diff_filters �
      - 5. :ref:`Report <reports>` → :ref:`Reporter <reporters>`
    * - *Fetch the raw bytes.* Every job declares a single source.
 
-       - ``url:`` (default) — HTTP/FTP/``file://`` via ``httpx``, ``requests``, or ``curl_cffi`` (*kind: url*)
+       - ``url:`` (default) — HTTP/FTP/``file://`` via ``httpx2``, ``requests``, or ``curl_cffi`` (*kind: url*)
        - ``url:`` + ``use_browser: true`` — Playwright-driven Chrome/Firefox/WebKit; renders JS (*kind: browser*)
        - ``command:`` — local shell command output (*kind: command*)
      - *Transform the fetched bytes* before storing & comparing. Chained, applied in order.

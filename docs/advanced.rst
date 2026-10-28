@@ -373,7 +373,7 @@ the environment variable ``WEBCHANGES_BROWSER_CDP_CACHE=0``.
 Overriding the content encoding
 -------------------------------
 (rare) For web pages with missing or incorrect ``'Content-type'`` HTTP header or whose encoding cannot be
-`correctly guessed <https://www.python-httpx.org/advanced/text-encodings/>`__
+`correctly guessed <https://pydantic.dev/docs/httpx2/advanced/text-encodings/>`__
 by the `chardet <https://chardet.readthedocs.io/en/latest/faq.html#what-is-character-encoding-auto-detection>`__
 library our default HTTP client uses, it may be useful to explicitly specify an encoding from Python's `Standard
 Encodings <https://docs.python.org/3/library/codecs.html#standard-encodings>`__ list like this:

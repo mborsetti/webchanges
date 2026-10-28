@@ -137,9 +137,9 @@
     },
     "http_client": {
       "type": "string",
-      "enum": ["httpx", "requests", "curl_cffi"],
-      "description": "HTTP library to use.",
-      "default": "httpx"
+      "enum": ["httpx2", "requests", "curl_cffi", "httpx"],
+      "description": "HTTP library to use. httpx2 (the default) falls back to httpx if httpx2 is not installed; httpx is an alias of httpx2.",
+      "default": "httpx2"
     },
     "impersonate": {
       "type": "string",
@@ -149,7 +149,7 @@
     "http_version": {
       "type": "string",
       "enum": ["v1", "v2", "v2tls", "v2_prior_knowledge", "v3", "v3only"],
-      "description": "HTTP protocol version: v1 (HTTP/1.1), v2 (HTTP/2; with httpx requires the h2 package), and, with http_client: curl_cffi only, v2tls, v2_prior_knowledge, v3 (HTTP/3 with fallback) and v3only. Not supported by http_client: requests."
+      "description": "HTTP protocol version: v1 (HTTP/1.1), v2 (HTTP/2; with httpx2 requires the h2 package), and, with http_client: curl_cffi only, v2tls, v2_prior_knowledge, v3 (HTTP/3 with fallback) and v3only. Not supported by http_client: requests."
     },
     "fingerprints": {
       "type": "object",
@@ -166,7 +166,7 @@
     },
     "ignore_dh_key_too_small": {
       "type": "boolean",
-      "description": "If true, accepts a server's weak (1024-bit) Diffie-Hellman key by lowering the OpenSSL security level (certificates are still verified). Supported by http_client httpx and requests, not by curl_cffi.",
+      "description": "If true, accepts a server's weak (1024-bit) Diffie-Hellman key by lowering the OpenSSL security level (certificates are still verified). Supported by http_client httpx2 and requests, not by curl_cffi.",
       "default": false
     },
     "ignore_incomplete_reads": {

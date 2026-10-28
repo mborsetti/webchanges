@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 try:
-    from httpx import UnsupportedProtocol
+    from httpx2 import UnsupportedProtocol
 except ImportError:
     from requests.exceptions import MissingSchema as UnsupportedProtocol
 
@@ -598,7 +598,7 @@ def build_ntfy_report() -> Report:
     return test_report
 
 
-@pytest.mark.parametrize('client', ['httpx', 'requests'])
+@pytest.mark.parametrize('client', ['httpx2', 'requests'])
 def test_ntfy_publishes_every_job(client: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """Ntfy publishes one message per job with either HTTP client.
 
@@ -616,14 +616,14 @@ def test_ntfy_publishes_every_job(client: str, monkeypatch: pytest.MonkeyPatch) 
         calls.append({'url': url, **kwargs})
         return SimpleNamespace(status_code=200, text='')
 
-    if client == 'httpx':
-        import httpx
+    if client == 'httpx2':
+        import httpx2
 
-        monkeypatch.setattr(httpx.Client, 'post', fake_post)
+        monkeypatch.setattr(httpx2.Client, 'post', fake_post)
     else:
-        monkeypatch.setattr(reporters_base, 'httpx', None)
+        monkeypatch.setattr(reporters_base, 'httpx2', None)
         monkeypatch.setattr(reporters_base, 'requests', requests, raising=False)
-        monkeypatch.setattr(reporters_web, 'httpx', None)
+        monkeypatch.setattr(reporters_web, 'httpx2', None)
         monkeypatch.setattr(requests.Session, 'post', fake_post)
 
     build_ntfy_report().finish_one('ntfy', check_enabled=False)
@@ -651,10 +651,10 @@ def test_ntfy_publishes_every_job(client: str, monkeypatch: pytest.MonkeyPatch) 
 def test_reporters_post_more_than_once(name: str, config: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
     """Reporters posting once per job or per chunk reuse one open HTTP client.
 
-    Until 3.39, the httpx client was closed after the first post and the second one raised RuntimeError: Cannot reopen a
-    client instance.
+    Until 3.39, the httpx client was closed after the first post and the second one raised RuntimeError: Cannot reopen
+    a client instance.
     """
-    import httpx
+    import httpx2
 
     calls: list[str] = []
 
@@ -662,7 +662,7 @@ def test_reporters_post_more_than_once(name: str, config: dict[str, Any], monkey
         calls.append(url)
         return SimpleNamespace(status_code=200, text='ok', content=b'ok')
 
-    monkeypatch.setattr(httpx.Client, 'post', fake_post)
+    monkeypatch.setattr(httpx2.Client, 'post', fake_post)
     test_report = build_ntfy_report()
     report_config = cast('dict[str, Any]', test_report.config['report'])
     report_config[name] = {**report_config[name], 'enabled': True, **config}
@@ -673,7 +673,7 @@ def test_reporters_post_more_than_once(name: str, config: dict[str, Any], monkey
 
 def test_ntfy_failure_does_not_stop_other_jobs(monkeypatch: pytest.MonkeyPatch) -> None:
     """A failed publication is raised only after every job has been published."""
-    import httpx
+    import httpx2
 
     calls: list[str] = []
 
@@ -681,7 +681,7 @@ def test_ntfy_failure_does_not_stop_other_jobs(monkeypatch: pytest.MonkeyPatch) 
         calls.append(kwargs['headers']['Title'])
         return SimpleNamespace(status_code=500 if len(calls) == 1 else 200, text='server error')
 
-    monkeypatch.setattr(httpx.Client, 'post', fake_post)
+    monkeypatch.setattr(httpx2.Client, 'post', fake_post)
     with pytest.raises(RuntimeError) as pytest_wrapped_e:
         build_ntfy_report().finish_one('ntfy', check_enabled=False)
     assert len(calls) == 2
@@ -745,7 +745,7 @@ def test_slack_and_mattermost_post_to_webhook(name: str, markdown: bool, monkeyp
 
     Like the 'webhook' reporter, Mattermost with Markdown. Until 3.39 'slack' was dropped and 'mattermost' ignored.
     """
-    import httpx
+    import httpx2
 
     from webchanges.storage import YamlConfigStorage
 
@@ -755,7 +755,7 @@ def test_slack_and_mattermost_post_to_webhook(name: str, markdown: bool, monkeyp
         calls.append({'url': url, **kwargs})
         return SimpleNamespace(status_code=200, text='ok', content=b'ok')
 
-    monkeypatch.setattr(httpx.Client, 'post', fake_post)
+    monkeypatch.setattr(httpx2.Client, 'post', fake_post)
     test_report = build_ntfy_report()
     cast('dict[str, Any]', test_report.config['report'])[name] = {
         **YamlConfigStorage.legacy_reporter_defaults(name),

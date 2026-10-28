@@ -111,7 +111,7 @@ Example ``hooks.py`` file:
            additional_headers = {"x-special": "test"}
            self.headers.update(
                additional_headers
-           )  # self.headers always an httpx.Headers object
+           )  # self.headers always an httpx2.Headers object
            return super().retrieve(
                job_state
            )  # uses the existing code to then browse and capture data

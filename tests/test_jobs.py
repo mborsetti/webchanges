@@ -24,10 +24,11 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 import yaml
-from httpx import HTTPStatusError
+from httpx2 import HTTPStatusError
 from requests import HTTPError
 
 from tests.conftest import close_ssdb_storage
+from webchanges import __user_agent__
 from webchanges.config import CommandConfig
 from webchanges.handler import JobState, Snapshot
 from webchanges.jobs import (
@@ -210,7 +211,7 @@ if importlib.util.find_spec('requests') is not None:
 
 
 def job_type_str(v: dict[str, Any]) -> str:
-    return 'BrowserJob' if v.get('use_browser') else f'UrlJob-{v.get("http_client", "httpx")}'
+    return 'BrowserJob' if v.get('use_browser') else f'UrlJob-{v.get("http_client", "httpx2")}'
 
 
 def new_command_config(config_file: Path, jobs_file: Path, hooks_file: Path) -> CommandConfig:
@@ -243,8 +244,8 @@ def test_check_429_transient_error(ssdb_storage: SsdbSQLite3Storage, mocker: pyt
         mock_response.history = []
         mock_response.headers = {'Content-Type': 'text/plain'}
 
-        # Mock the httpx client's request method to return our mock response
-        mocker.patch('httpx.Client.request', return_value=mock_response)
+        # Mock the httpx2 client's request method to return our mock response
+        mocker.patch('httpx2.Client.request', return_value=mock_response)
 
         job_state.save()
         ssdb_storage._copy_temp_to_permanent(delete=True)
@@ -348,7 +349,7 @@ def test_empty_as_error(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.Mo
     mock_response.history = []
     mock_response.headers = {'Content-Type': 'text/plain'}
     mock_response.text = 'value: 1'
-    mocker.patch('httpx.Client.request', return_value=mock_response)
+    mocker.patch('httpx2.Client.request', return_value=mock_response)
 
     # First run: the content is saved as the snapshot
     with JobState(ssdb_storage, job) as job_state:
@@ -390,7 +391,7 @@ def test_empty_as_error_error_ignored(ssdb_storage: SsdbSQLite3Storage, mocker: 
     mock_response.history = []
     mock_response.headers = {'Content-Type': 'text/plain'}
     mock_response.text = ''
-    mocker.patch('httpx.Client.request', return_value=mock_response)
+    mocker.patch('httpx2.Client.request', return_value=mock_response)
 
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
@@ -415,7 +416,7 @@ def test_empty_as_error_not_ignored_by_ignore_connection_errors(
     mock_response.history = []
     mock_response.headers = {'Content-Type': 'text/plain'}
     mock_response.text = ''
-    mocker.patch('httpx.Client.request', return_value=mock_response)
+    mocker.patch('httpx2.Client.request', return_value=mock_response)
 
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
@@ -436,7 +437,7 @@ def test_empty_as_error_whitespace_only(ssdb_storage: SsdbSQLite3Storage, mocker
     mock_response.history = []
     mock_response.headers = {'Content-Type': 'text/plain'}
     mock_response.text = '   \n\n  '
-    mocker.patch('httpx.Client.request', return_value=mock_response)
+    mocker.patch('httpx2.Client.request', return_value=mock_response)
 
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
@@ -456,7 +457,7 @@ def test_empty_response_without_empty_as_error(
     mock_response.history = []
     mock_response.headers = {'Content-Type': 'text/plain'}
     mock_response.text = ''
-    mocker.patch('httpx.Client.request', return_value=mock_response)
+    mocker.patch('httpx2.Client.request', return_value=mock_response)
 
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
@@ -480,7 +481,7 @@ def test_empty_as_error_after_filtering(ssdb_storage: SsdbSQLite3Storage, mocker
     mock_response.history = []
     mock_response.headers = {'Content-Type': 'text/plain'}
     mock_response.text = 'header\nvalue: 1\nfooter'
-    mocker.patch('httpx.Client.request', return_value=mock_response)
+    mocker.patch('httpx2.Client.request', return_value=mock_response)
 
     # First run: the filtered content is saved as the snapshot
     with JobState(ssdb_storage, job) as job_state:
@@ -524,7 +525,7 @@ def test_empty_as_error_ignore(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_
     mock_response.url = 'https://www.example.com/'
     mock_response.history = []
     mock_response.headers = {'Content-Type': 'text/plain'}
-    mocker.patch('httpx.Client.request', return_value=mock_response)
+    mocker.patch('httpx2.Client.request', return_value=mock_response)
 
     for text in ('', 'header\nfooter'):
         mock_response.text = text
@@ -652,7 +653,7 @@ def test_curl_cffi_impersonate_passthrough(ssdb_storage: SsdbSQLite3Storage, moc
 
 
 def test_httpx_http_version_passthrough(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_mock.MockerFixture) -> None:
-    """Verify http_version=v1 forces http2=False on httpx.Client, and v2 forces http2=True."""
+    """Verify http_version=v1 forces http2=False on httpx2.Client, and v2 forces http2=True."""
     captured: dict[str, object] = {}
 
     def fake_client(**kwargs: object) -> Mock:
@@ -673,7 +674,7 @@ def test_httpx_http_version_passthrough(ssdb_storage: SsdbSQLite3Storage, mocker
         instance.request.return_value = mock_response
         return instance
 
-    mocker.patch('httpx.Client', side_effect=fake_client)
+    mocker.patch('httpx2.Client', side_effect=fake_client)
 
     job = JobBase.unserialize({'url': 'https://example.com/', 'http_version': 'v1'})
     with JobState(ssdb_storage, job) as job_state:
@@ -690,12 +691,55 @@ def test_httpx_http_version_passthrough(ssdb_storage: SsdbSQLite3Storage, mocker
 
 
 def test_httpx_http_version_invalid(ssdb_storage: SsdbSQLite3Storage) -> None:
-    """http_version=v3 with httpx should raise ValueError at retrieve time."""
+    """http_version=v3 with httpx2 should raise ValueError at retrieve time."""
     job = JobBase.unserialize({'url': 'https://example.com/', 'http_version': 'v3'})
     with JobState(ssdb_storage, job) as job_state:
         job_state.process()
     assert isinstance(job_state.exception, ValueError)
     assert 'http_version' in str(job_state.exception)
+
+
+@pytest.mark.parametrize('http_client', ['httpx2', 'httpx'])
+def test_http_client_httpx_alias(ssdb_storage: SsdbSQLite3Storage, http_client: str) -> None:
+    """'http_client: httpx' is an alias of 'httpx2': both select the httpx2 (or httpx) client."""
+    job = JobBase.unserialize({'url': 'https://example.com/', 'http_client': http_client})
+    assert isinstance(job, UrlJob)
+    with JobState(ssdb_storage, job) as job_state:
+        assert job._select_http_client(job_state) == job._retrieve_httpx2
+    assert job_state._http_client_used == 'httpx2'
+
+
+@pytest.mark.parametrize(
+    ('http_client', 'job_headers', 'expected'),
+    [
+        pytest.param(
+            'curl_cffi',
+            None,
+            None,
+            marks=pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed'),
+        ),
+        pytest.param(
+            'curl_cffi',
+            {'User-Agent': 'mine'},
+            'mine',
+            marks=pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed'),
+        ),
+        ('httpx2', None, __user_agent__),
+        ('requests', None, __user_agent__),
+    ],
+)
+def test_default_user_agent_per_http_client(
+    mocker: pytest_mock.MockerFixture, http_client: str, job_headers: dict[str, str] | None, expected: str | None
+) -> None:
+    """The default User-Agent is not sent with curl_cffi, which sends the impersonated browser's; a job's is kept."""
+    retrieve = mocker.patch.object(UrlJob, f'_retrieve_{http_client}', return_value=('ok', '', 'text/plain'))
+    job_data: dict[str, Any] = {'url': 'https://example.com/', 'http_client': http_client}
+    if job_headers:
+        job_data['headers'] = job_headers
+    job = JobBase.unserialize(job_data)
+    with JobState(None, job) as job_state:  # ty:ignore[invalid-argument-type]
+        job.retrieve(job_state)
+    assert retrieve.call_args.kwargs['headers'].get('User-Agent') == expected
 
 
 def test_http_version_invalid_with_requests(ssdb_storage: SsdbSQLite3Storage) -> None:
@@ -821,8 +865,8 @@ def test_check_429_ignore_4xx(ssdb_storage: SsdbSQLite3Storage, mocker: pytest_m
         mock_response.history = []
         mock_response.headers = {'Content-Type': 'text/plain'}
 
-        # Mock the httpx client's request method to return our mock response
-        mocker.patch('httpx.Client.request', return_value=mock_response)
+        # Mock the httpx2 client's request method to return our mock response
+        mocker.patch('httpx2.Client.request', return_value=mock_response)
 
         job_state.save()
         ssdb_storage._copy_temp_to_permanent(delete=True)
@@ -1041,7 +1085,7 @@ def test_check_ignore_connection_errors(job_data: dict[str, Any], ssdb_storage: 
             assert job_state.error_ignored is True
             # also check that it's using the correct HTTP client library
             if not job_data.get('use_browser'):
-                assert job_state._http_client_used == job_data.get('http_client', 'httpx')
+                assert job_state._http_client_used == job_data.get('http_client', 'httpx2')
 
 
 @connection_required
@@ -1602,11 +1646,11 @@ def test_ignore_error() -> None:
 
 def test_ignore_incomplete_reads() -> None:
     """ignore_incomplete_reads silences the incomplete-read error of each HTTP client, and only that error."""
-    import httpx
+    import httpx2
     import requests
 
     incomplete_reads: list[Exception] = [
-        httpx.RemoteProtocolError(
+        httpx2.RemoteProtocolError(
             'peer closed connection without sending complete message body: incomplete chunked read'
         ),
         requests.exceptions.ChunkedEncodingError('Connection broken: IncompleteRead(0 bytes read)'),
@@ -1620,7 +1664,7 @@ def test_ignore_incomplete_reads() -> None:
 
     job = JobBase.unserialize({'url': 'https://www.example.com', 'ignore_incomplete_reads': True})
     assert all(job.ignore_error(exception) for exception in incomplete_reads)
-    assert job.ignore_error(httpx.ConnectError('Connection refused')) is False
+    assert job.ignore_error(httpx2.ConnectError('Connection refused')) is False
     assert job.ignore_error(requests.exceptions.ConnectionError('Connection refused')) is False
 
     job = JobBase.unserialize({'url': 'https://www.example.com'})
@@ -2400,7 +2444,7 @@ def flaky_server() -> Iterator[str]:
 
 
 RETRY_CLIENTS = [
-    'httpx',
+    'httpx2',
     'requests',
     pytest.param('curl_cffi', marks=pytest.mark.skipif(not curl_cffi_is_installed, reason='curl_cffi not installed')),
 ]
@@ -2501,11 +2545,11 @@ def test_retry_wait_caps() -> None:
 def test_ignore_dh_key_too_small_httpx_context(
     mocker: pytest_mock.MockerFixture, ssl_no_verify: bool, verify_mode: ssl.VerifyMode
 ) -> None:
-    """With ignore_dh_key_too_small, httpx gets an SSL context with a lowered security level.
+    """With ignore_dh_key_too_small, httpx2 gets an SSL context with a lowered security level.
 
     It still verifies certificates against CA certificates (unless ssl_no_verify is set).
     """
-    client = mocker.patch('webchanges.jobs._url.httpx.Client', side_effect=RuntimeError('stop'))
+    client = mocker.patch('webchanges.jobs._url.httpx2.Client', side_effect=RuntimeError('stop'))
     job = JobBase.unserialize(
         {'url': 'https://www.example.com/', 'ignore_dh_key_too_small': True, 'ssl_no_verify': ssl_no_verify}
     )
@@ -2518,7 +2562,8 @@ def test_ignore_dh_key_too_small_httpx_context(
     assert isinstance(context, ssl.SSLContext)
     assert context.verify_mode == verify_mode
     if not ssl_no_verify:
-        assert context.cert_store_stats()['x509_ca'] > 0
+        # httpx2 verifies against the OS certificate store via truststore on Windows/macOS (no CA certificates loaded)
+        assert type(context).__module__.startswith('truststore') or context.cert_store_stats()['x509_ca'] > 0
 
 
 @pytest.mark.parametrize(('verify', 'verify_mode'), [(True, ssl.CERT_REQUIRED), (False, ssl.CERT_NONE)])
@@ -2555,7 +2600,7 @@ def test_ignore_dh_key_too_small_requests_mounts_adapter(mocker: pytest_mock.Moc
 
 # ---------------------------------------------------------------- HTTP clients behave the same
 
-# UrlJob has one implementation per HTTP client (httpx, requests, curl_cffi), and the fallback chain between them means
+# UrlJob has one implementation per HTTP client (httpx2, requests, curl_cffi), and the fallback chain between them means
 # a user can end up on any of them, so they must give the same data, ETag, media type and error messages.
 
 

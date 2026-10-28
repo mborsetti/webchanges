@@ -53,14 +53,6 @@ if TYPE_CHECKING:
 
     from webchanges.handler import JobState
 
-# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
-# _url.py for the full explanation).
-try:
-    import httpx
-except ImportError:  # pragma: no cover
-    if not TYPE_CHECKING:
-        httpx = None
-
 logger = logging.getLogger(__name__)
 
 

@@ -55,7 +55,7 @@ Changes worth being told about
 
 Sites that block urlwatch
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-* Choose the HTTP client per job with :ref:`http_client`: ``httpx`` (with HTTP/2), ``requests``, or ``curl_cffi``,
+* Choose the HTTP client per job with :ref:`http_client`: ``httpx2`` (with HTTP/2), ``requests``, or ``curl_cffi``,
   which presents the TLS fingerprint of a real browser to get past Cloudflare, Akamai and similar bot walls.
 * :ref:`Browser jobs <use_browser>` run Chrome, Edge, Firefox or WebKit through Playwright, can wait for a URL, a
   selector or a JavaScript condition, block images and other resources, and can attach to a browser that is already

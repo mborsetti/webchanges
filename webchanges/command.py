@@ -39,31 +39,21 @@ from urllib.parse import unquote_plus
 from zoneinfo import ZoneInfo
 
 from webchanges import __docs_url__, __project_name__
+from webchanges._httpx import h2, httpx2
 from webchanges.handler import JobState, Report
 from webchanges.jobs import JobBase, NotModifiedError, UrlJob
 from webchanges.reporters import reporter_configs
 from webchanges.util import dur_text
 
-try:
-    import httpx
-except ImportError:  # pragma: no cover
-    # The assignment is hidden from the type checker so that `httpx` keeps its module type (see webchanges/jobs/
-    # _url.py for the full explanation).
-    if not TYPE_CHECKING:
-        httpx = None
-    print("Required package 'httpx' not found; will attempt to run using 'requests'.")
+if httpx2 is None:  # pragma: no cover
+    print("Required package 'httpx2' (or 'httpx') not found; will attempt to run using 'requests'.")
     try:
         import requests
-    except ImportError as e:  # pragma: no cover
+    except ImportError as e:
         raise RuntimeError(
-            f"A Python HTTP client package (either 'httpx' or 'requests' is required to run {__project_name__}; "
-            'neither can be imported.'
+            f"A Python HTTP client package (either 'httpx2', 'httpx' or 'requests') is required to run "
+            f'{__project_name__}; none can be imported.'
         ) from e
-if httpx is not None:
-    try:
-        import h2
-    except ImportError:  # pragma: no cover
-        h2 = None
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -982,7 +972,7 @@ class UrlwatchCommand:
             print('You need to set up your bot token first (see documentation).')
             self._exit(1)
 
-        with httpx.Client(http2=h2 is not None) if httpx else requests.Session() as http_client:  # ty: ignore[redundant-condition]
+        with httpx2.Client(http2=h2 is not None) if httpx2 else requests.Session() as http_client:  # ty: ignore[redundant-condition]
             info = http_client.get(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=60).json()
             if not info['ok']:
                 print(f'Error with token {bot_token}: {info["description"]}.')

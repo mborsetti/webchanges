@@ -1,6 +1,6 @@
 """Test the vendored fallback modules in webchanges._vendored.
 
-These modules are only imported by webchanges when the corresponding optional dependency (typeguard, httpx,
+These modules are only imported by webchanges when the corresponding optional dependency (typeguard, httpx2,
 packaging) is not installed, so the regular test suite never exercises them; they are tested directly here.
 """
 
@@ -50,7 +50,7 @@ def test_typeguard_literal_bool_int() -> None:
 
 
 def test_headers() -> None:
-    """The vendored httpx.Headers is case-insensitive and joins repeated keys."""
+    """The vendored httpx2.Headers is case-insensitive and joins repeated keys."""
     headers = Headers({'User-Agent': 'webchanges'})
     assert headers['user-agent'] == 'webchanges'
     headers = Headers([('x-a', '1'), ('X-A', '2')])

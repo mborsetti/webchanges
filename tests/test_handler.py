@@ -222,7 +222,7 @@ def test_not_modified_after_error_does_not_wipe_snapshot(
     mock_response = mocker.Mock()
     mock_response.status_code = 304
     mock_response.headers = {}
-    mocker.patch('httpx.Client.request', return_value=mock_response)
+    mocker.patch('httpx2.Client.request', return_value=mock_response)
 
     urlwatcher.run_jobs()
     ssdb_storage._copy_temp_to_permanent(delete=True)

@@ -402,7 +402,11 @@ The default headers are:
    accept: '*/*'
    accept-encoding:  # depends on libraries installed; at a minimum 'gzip, deflate'
    connection: 'keep-alive'
-   user-agent: # set by the HTTP client, e.g. 'python-httpx/0.27.0'
+   user-agent: 'webchanges/<version> (+https://pypi.org/project/webchanges/)'
+
+With ``http_client: curl_cffi``, the default headers, ``user-agent`` included, are instead those of the browser being
+impersonated (see :ref:`impersonate <impersonate>`).
+
 
 Jobs with ``use_browser: true``
 *******************************
@@ -487,7 +491,7 @@ initialization_url
 The HTTP client or browser will navigate to ``initialization_url`` before navigating to ``url`` (a string).
 
 This is useful for monitoring subpages on websites that rely on a state established when first landing on their
-"home" page (e.g. session cookies set by the landing page). With HTTP client backends (``httpx``, ``requests``,
+"home" page (e.g. session cookies set by the landing page). With HTTP client backends (``httpx2``, ``requests``,
 ``curl_cffi``), a ``GET`` request is made to ``initialization_url`` within the same session; cookies received are
 automatically carried over to the main request. For browser jobs (``use_browser: true``), Chrome first navigates to
 ``initialization_url`` before navigating to ``url``.
@@ -606,11 +610,11 @@ The following directives are available only for ``url`` jobs without ``use_brows
 
 http_client
 ^^^^^^^^^^^
-The Python HTTP client library to be used. One of `HTTPX <https://www.python-httpx.org/>`__ (default),
+The Python HTTP client library to be used. One of `HTTPX2 <https://github.com/pydantic/httpx2>`__ (default),
 `requests <https://requests.readthedocs.io/en/latest/>`__, or
 `curl_cffi <https://github.com/lexiforest/curl_cffi>`__.
 
-We use ``HTTPX`` as some web servers will refuse a connection or serve an error if a connection is attempted using an
+We use ``HTTPX2`` by default as some web servers will refuse a connection or serve an error if a connection is attempted using an
 earlier version than the newer HTTP/2 network protocol. Use ``http_client: requests`` to use the ``requests``
 library used by default in releases prior to 3.16 (but it only supports up to HTTP/1.1 protocol).
 
@@ -620,7 +624,7 @@ browser TLS fingerprints (Chrome, Firefox, Safari, Edge) at the wire level. The 
 the :ref:`impersonate <impersonate>` directive (default ``chrome``). This is much lighter than running a full
 headless browser job (``use_browser: true``).
 
-If neither ``HTTPX`` nor ``requests`` is installed, ``curl_cffi`` is used as a last-resort fallback when
+If none of ``httpx2`` (or ``httpx`` as temporary backup) and ``requests`` is installed, ``curl_cffi`` is used as a last-resort fallback when
 ``http_client`` is unset.
 
 Required packages
@@ -651,14 +655,14 @@ http_version
 Pins the HTTP protocol version used for the request. One of:
 
 * ``v1`` — HTTP/1.1.
-* ``v2`` — HTTP/2. For ``http_client: httpx`` this requires the ``h2`` package (``pip install h2``); for
+* ``v2`` — HTTP/2. For ``http_client: httpx2`` this requires the ``h2`` package (``pip install h2``); for
   ``http_client: curl_cffi`` it is supported out of the box.
 * ``v2tls`` — HTTP/2 over TLS, HTTP/1.1 over cleartext (curl_cffi only).
 * ``v2_prior_knowledge`` — HTTP/2 with prior-knowledge upgrade; no HTTP/1.1 fallback (curl_cffi only).
 * ``v3`` — HTTP/3 (QUIC) with fallback to earlier versions (curl_cffi only).
 * ``v3only`` — HTTP/3 only, no fallback (curl_cffi only).
 
-If unset, each backend keeps its default behavior: ``httpx`` negotiates HTTP/2 if ``h2`` is installed else HTTP/1.1;
+If unset, each backend keeps its default behavior: ``httpx2`` negotiates HTTP/2 if ``h2`` is installed else HTTP/1.1;
 ``curl_cffi`` uses the version dictated by its libcurl build and the active impersonation profile.
 
 The ``requests`` backend is HTTP/1.1 only and does not accept this directive; setting ``http_version`` together with
@@ -693,13 +697,13 @@ error and can't get the anyone to fix the security vulnerability on the server.
 It works by lowering the OpenSSL security level to 1 for the job's connections, which accepts a 1024-bit
 Diffie-Hellman key; certificates are still verified (unless :ref:`ssl_no_verify` is set).
 
-This directive is supported by the ``httpx`` (default) and ``requests`` HTTP clients, but not by ``http_client:
+This directive is supported by the ``httpx2`` (default) and ``requests`` HTTP clients, but not by ``http_client:
 curl_cffi``.
 
 .. versionadded:: 3.9.2
 
 .. versionchanged:: 3.38
-   Fixed: with ``http_client: httpx`` it made every HTTPS request fail with a certificate verification error, and with
+   Fixed: with ``http_client: httpx2`` it made every HTTPS request fail with a certificate verification error, and with
    ``http_client: requests`` it had no effect with version 2.x of the ``urllib3`` library.
 
 
@@ -709,7 +713,7 @@ ignore_incomplete_reads
 ^^^^^^^^^^^^^^^^^^^^^^^
 Ignore error if the server closes the connection before sending the complete response (true/false). Defaults to false.
 
-The error is ``httpx.RemoteProtocolError`` with ``http_client: httpx`` (e.g. ``peer closed connection without sending
+The error is ``httpx2.RemoteProtocolError`` with ``http_client: httpx2`` (e.g. ``peer closed connection without sending
 complete message body: incomplete chunked read``), ``requests.exceptions.ChunkedEncodingError`` with ``http_client:
 requests``, and ``ChunkedEncodingError`` or ``IncompleteRead`` with ``http_client: curl_cffi``.
 
@@ -731,6 +735,9 @@ Accepts any browser target string supported by ``curl_cffi``, such as ``chrome``
 ``firefox133``, or ``edge99``. See the `curl_cffi documentation
 <https://curl-cffi.readthedocs.io/en/latest/impersonate/targets.html>`__ for the full list of available profiles.
 
+The impersonated browser's ``User-Agent`` header is sent (it must match the TLS fingerprint and the ``sec-ch-ua``
+client hints for the impersonation to be credible), unless the job sets its own in ``headers``.
+
 Example:
 
 .. code-block:: yaml
@@ -741,6 +748,9 @@ Example:
    impersonate: safari17_0
 
 .. versionadded:: 3.35
+
+.. versionchanged:: NEXT
+   The impersonated browser's ``User-Agent`` is sent instead of :program:`webchanges`' own.
 
 
 .. _fingerprints:

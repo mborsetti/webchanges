@@ -1,7 +1,7 @@
 cssselect
 h2
 html2text
-httpx
+httpx2
 lxml
 markdown2
 msgpack

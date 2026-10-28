@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 from webchanges.jobs import UrlJobBase
-from webchanges.reporters._base import MarkdownReporter, TextReporter, chunk_string, httpx
+from webchanges.reporters._base import MarkdownReporter, TextReporter, chunk_string, httpx2
 
 if TYPE_CHECKING:
     from webchanges.reporters._base import Response
@@ -42,7 +42,7 @@ class IFTTTReport(TextReporter):
 
     def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
         webhook_url = 'https://maker.ifttt.com/trigger/{event}/with/key/{key}'.format(**self.config)
-        # One client for all the jobs: a closed httpx client cannot be reopened
+        # One client for all the jobs: a closed httpx2 client cannot be reopened
         with self.http_client as http_client:
             for job_state in self.report.get_filtered_job_states(self.job_states):
                 pretty_name = job_state.job.pretty_name()
@@ -184,7 +184,7 @@ class WebhookReporter(TextReporter):
             return None
 
         result = None
-        # One client for all the chunks: a closed httpx client cannot be reopened
+        # One client for all the chunks: a closed httpx2 client cannot be reopened
         with self.http_client:
             for chunk in chunk_string(text, self.max_length, numbering=True):
                 res = self.submit_to_webhook(webhook_url, chunk)
@@ -287,7 +287,7 @@ class DiscordReporter(TextReporter):
             return None
 
         result = None
-        # One client for all the chunks: a closed httpx client cannot be reopened
+        # One client for all the chunks: a closed httpx2 client cannot be reopened
         with self.http_client:
             for chunk in chunk_string(text, self.max_length, numbering=True):
                 res = self.submit_to_discord(webhook_url, chunk)
@@ -444,7 +444,7 @@ class NtfyReporter(TextReporter):
 
                 logger.debug('Publishing to ntfy topic %s: %s', topic_url, title)
                 try:
-                    if httpx:  # ty: ignore[redundant-condition]
+                    if httpx2:  # ty: ignore[redundant-condition]
                         result = http_client.post(topic_url, headers=job_headers, content=content)
                     else:
                         # requests encodes str header values as Latin-1, so non-Latin-1 job names need UTF-8 bytes.

@@ -618,7 +618,7 @@ def _print_dist_sub_deps(name: str, raw: list[str]) -> None:
     try:
         from packaging.requirements import InvalidRequirement, Requirement
     except ImportError:
-        # Fallback: requirements without whitespace before the operator (e.g. ``httpx>=0.20``) would otherwise be
+        # Fallback: requirements without whitespace before the operator (e.g. ``httpx2>=2.16``) would otherwise be
         # treated as invalid distribution names; this regex strips the specifier so the lookup succeeds.
         for req_name in sorted({re.split('[ <>=;#^[]', i)[0] for i in raw}):
             try:
@@ -699,7 +699,7 @@ def _dependencies() -> list[str]:
         if dist and dist.canonical_name == __project_name__:
             requires_dist = dist.metadata_dict.get('requires_dist', [])
             dependencies = {re.split('[ <>=;#^[]', d)[0] for d in requires_dist}
-            dependencies.update(('httpx', 'packaging', 'typeguard'))
+            dependencies.update(('httpx', 'httpx2', 'packaging', 'typeguard'))
             return sorted(dependencies, key=str.lower)
     except ImportError:
         pass
@@ -719,6 +719,7 @@ def _dependencies() -> list[str]:
         'html2text',
         'html5lib',
         'httpx',
+        'httpx2',
         'jq',
         'jsbeautifier',
         'keyring',

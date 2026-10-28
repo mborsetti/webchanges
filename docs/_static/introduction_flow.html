@@ -246,7 +246,7 @@
         <p class="lead"><em>Fetch the raw bytes.</em> Every job declares a single source.</p>
         <ul>
           <li>
-            <code>url:</code> + (default) — HTTP/FTP/<code>file://</code> via <code>httpx</code>, <code>requests</code>,
+            <code>url:</code> + (default) — HTTP/FTP/<code>file://</code> via <code>httpx2</code>, <code>requests</code>,
             or <code>curl_cffi</code>. <em>kind:&nbsp;url</em>
           </li>
           <li>
@@ -426,14 +426,14 @@
         </li>
         <li>
           <strong>Cloudflare / Akamai / JA3 walls need <code>http_client: curl_cffi</code>.</strong> The default
-          <code>httpx</code> (and <code>requests</code>) backends are detected at the TLS handshake and may get 403s,
+          <code>httpx2</code> (and <code>requests</code>) backends are detected at the TLS handshake and may get 403s,
           429s, or CAPTCHAs even on pages a real browser loads fine. <code>curl_cffi</code> wraps libcurl-impersonate
           and replays a real browser TLS/HTTP-2 fingerprint at the wire level — much lighter than
           <code>use_browser: true</code>. Install with <code>uv pip install webchanges[curl_cffi]</code>, then pick the
           profile via <code>impersonate: chrome|safari17_0|firefox133|…</code> (default <code>chrome</code>); use the
           <code>fingerprints:</code> directive for raw <code>ja3</code> / <code>akamai</code> /
           <code>extra_fp</code> overrides. The <code>impersonate</code> and <code>fingerprints</code> directives are
-          silently ignored by the <code>httpx</code> and <code>requests</code> backends. (<a
+          silently ignored by the <code>httpx2</code> and <code>requests</code> backends. (<a
             href="https://webchanges.readthedocs.io/en/stable/jobs.html#http-client"
             >http_client</a
           >, <a href="https://webchanges.readthedocs.io/en/stable/jobs.html#impersonate">impersonate</a>)

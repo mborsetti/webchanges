@@ -20,28 +20,13 @@ from urllib.parse import urlsplit
 import yaml
 
 from webchanges import __user_agent__
+from webchanges._httpx import Headers, httpx2
 from webchanges.filters._base import FiltersList  # noqa: TC001 (required for type check)
 from webchanges.jobs._exceptions import TransientHTTPError
 from webchanges.util import TrackSubClasses
 
-# The fallback assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/
-# _url.py for the full explanation).
-try:
-    import httpx
-except ImportError:  # pragma: no cover
-    print("Required package 'httpx' not found; will attempt to run using 'requests'")
-    if not TYPE_CHECKING:
-        httpx = None
-
-if httpx is not None:
-    from httpx import Headers
-
-    try:
-        import h2
-    except ImportError:  # pragma: no cover
-        h2 = None
-else:
-    from webchanges._vendored.headers import Headers
+if httpx2 is None:  # pragma: no cover
+    print("Required package 'httpx2' (or 'httpx') not found; will attempt to run using 'requests'")
 
 try:
     from typeguard import TypeCheckError, check_type  # ty:ignore[unresolved-import]
@@ -94,7 +79,7 @@ def cookies_from_dict(cookies: dict[str, Any]) -> dict[str, str | None]:
     return {k: None if v is None else str(v) for k, v in cookies.items()}
 
 
-# Custom YAML representer function for httpx.Headers
+# Custom YAML representer function for Headers
 def represent_headers(dumper: yaml.SafeDumper, data: Headers) -> yaml.MappingNode:
     return dumper.represent_dict(headers_to_dict(data))
 
@@ -102,9 +87,10 @@ def represent_headers(dumper: yaml.SafeDumper, data: Headers) -> yaml.MappingNod
 # Add the custom representer to the SafeDumper
 yaml.SafeDumper.add_representer(Headers, represent_headers)
 
-# reduce logging from httpx's sub-modules
-if httpx is not None and logger.getEffectiveLevel() == logging.DEBUG:
+# reduce logging from httpx2's sub-modules (httpcore2; httpcore if the httpx fallback is used)
+if httpx2 is not None and logger.getEffectiveLevel() == logging.DEBUG:
     logging.getLogger('hpack').setLevel(logging.INFO)
+    logging.getLogger('httpcore2').setLevel(logging.INFO)
     logging.getLogger('httpcore').setLevel(logging.INFO)
 
 # Deprecated job directives and the directive replacing each one. Insertion order matters: 'https_proxy' is
@@ -176,7 +162,7 @@ class JobBase(metaclass=TrackSubClasses):
     guid: str = ''
     headers = Headers(encoding='utf-8')  # UrlJobBase; shared by all jobs not setting it: never mutate it in place
     hook_data: Any = None  # hooks.py
-    http_client: Literal['httpx', 'requests', 'curl_cffi'] | None = None  # UrlJob
+    http_client: Literal['httpx2', 'requests', 'curl_cffi', 'httpx'] | None = None  # UrlJob ('httpx' = 'httpx2')
     http_version: Literal['v1', 'v2', 'v2tls', 'v2_prior_knowledge', 'v3', 'v3only'] | None = None  # UrlJob
     http_credentials: str | None = None  # BrowserJob
     ignore_cached: bool | None = None  # UrlJobBase
@@ -370,7 +356,7 @@ class JobBase(metaclass=TrackSubClasses):
         # Make sure all the types are correct
         job.validate()
 
-        # Format headers and cookies (and turn values into strings to avoid httpx Exception):
+        # Format headers and cookies (and turn values into strings to avoid httpx2 Exception):
         if isinstance(job.headers, dict):
             job.headers = headers_from_dict(job.headers)
         if isinstance(job.cookies, dict):

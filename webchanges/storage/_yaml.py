@@ -33,17 +33,12 @@ import yaml.constructor
 import yaml.scanner
 
 from webchanges import __docs_url__, __project_name__, __version__
+from webchanges._httpx import Headers
 from webchanges.jobs import JobBase
 from webchanges.jobs._base import cookies_from_dict, headers_from_dict
 from webchanges.reporters import ReporterBase, reporter_configs
 from webchanges.storage._base import BaseYamlFileStorage, JobsBaseFileStorage
 from webchanges.storage._config import DEFAULT_CONFIG, _Config, validate_config
-
-try:
-    from httpx import Headers
-except ImportError:  # pragma: no cover
-    from webchanges._vendored.headers import Headers
-
 
 try:
     from typeguard import TypeCheckError  # ty:ignore[unresolved-import]

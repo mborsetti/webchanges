@@ -355,7 +355,7 @@ def _fetch_latest_from_pypi(timeout: float | None) -> str | None:
     """Query PyPi's Simple JSON API for the latest non-prerelease version.
 
     Uses the lightweight ``application/vnd.pypi.simple.v1+json`` endpoint via stdlib ``urllib.request`` to avoid
-    pulling in ``httpx`` (and its transitive ``rich``/``pygments`` deps) on every program startup. Pre-releases are
+    pulling in ``httpx2`` on every program startup. Pre-releases are
     filtered out unless they are the only releases available (mirroring PyPi's own ``info.version`` policy).
     Yanked-version filtering is intentionally skipped: parsing ``files[*].yanked`` would add significant code for a
     vanishingly rare case.

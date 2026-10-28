@@ -20,7 +20,7 @@ deepdiff; python_version < '3.15'
 docutils
 h2
 html5lib
-httpx
+httpx2
 jq
 jsbeautifier
 keyring

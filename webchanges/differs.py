@@ -54,6 +54,7 @@ from xml.parsers.expat import ExpatError
 import html2text
 import yaml
 
+from webchanges._httpx import h2, httpx2
 from webchanges.util import TrackSubClasses, linkify, mark_to_html, missing_dependency
 
 if TYPE_CHECKING:
@@ -63,18 +64,7 @@ if TYPE_CHECKING:
 
 
 # Optional dependencies (deepdiff, xmltodict, Pillow, numpy) are imported inside the differs that use them, so that only
-# the runs that need them pay for importing them (see missing_dependency() in webchanges/util.py). The fallback
-# assignment below is hidden from the type checker behind `if not TYPE_CHECKING` (see webchanges/jobs/_url.py).
-try:
-    import httpx
-except ImportError:  # pragma: no cover
-    if not TYPE_CHECKING:
-        httpx = None
-if httpx is not None:
-    try:
-        import h2
-    except ImportError:  # pragma: no cover
-        h2 = None
+# the runs that need them pay for importing them (see missing_dependency() in webchanges/util.py).
 
 import json
 
@@ -122,14 +112,14 @@ _ADDITIONS_ONLY_DISABLE_SAFEGUARD = 'disable_safeguard'
 _ADDITIONS_ONLY_DEFAULT_REMAINING = 0.25
 
 
-def _ai_google_retry_delay(response: httpx.Response) -> float | None:
+def _ai_google_retry_delay(response: httpx2.Response) -> float | None:
     """Extract the retry delay (in seconds) requested by a Google AI 429 response.
 
     Prefers the structured ``error.details[].retryDelay`` (a ``google.rpc.RetryInfo`` entry, e.g. ``"15s"``);
     falls back to a ``retry in <n>s`` match in the error message text (e.g. ``"Please retry in 15.606408828s"``).
 
     Args:
-        response: The httpx response with a 429 status.
+        response: The httpx2 response with a 429 status.
 
     Returns:
         The requested delay in seconds, or ``None`` if no delay could be parsed.
@@ -168,11 +158,11 @@ def _ai_google_retry_delay(response: httpx.Response) -> float | None:
     return None
 
 
-def _ai_google_retry_wait(response: httpx.Response) -> float | None:
+def _ai_google_retry_wait(response: httpx2.Response) -> float | None:
     """Determine how long to wait before retrying a transient Google AI response.
 
     Args:
-        response: The httpx response to evaluate.
+        response: The httpx2 response to evaluate.
 
     Returns:
         The number of seconds to wait before retrying (for a 429, the server-requested delay plus
@@ -192,28 +182,28 @@ def _ai_google_retry_wait(response: httpx.Response) -> float | None:
 
 
 def _ai_google_post_with_retry(
-    http_client: httpx.Client,
+    http_client: httpx2.Client,
     url: str,
     *,
     job: JobBase,
     **kwargs: Any,
-) -> httpx.Response:
+) -> httpx2.Response:
     """POST to a Google AI endpoint, retrying transient 429/503 responses with the server-requested delay.
 
     A 429 is retried using the delay the server asks for plus ``AI_GOOGLE_429_RETRY_BUFFER`` (the server truncates
     the delay to whole seconds); a 503 is retried after a fixed ``AI_GOOGLE_503_RETRY_WAIT``.
     Retries continue until a non-transient response is received or until the next wait would push the cumulative time
-    spent sleeping past the ``AI_GOOGLE_MAX_TOTAL_WAIT`` ceiling. ``httpx.HTTPError`` exceptions are not caught here and
-    propagate to the caller.
+    spent sleeping past the ``AI_GOOGLE_MAX_TOTAL_WAIT`` ceiling. ``httpx2.HTTPError`` exceptions are not caught here
+    and propagate to the caller.
 
     Args:
-        http_client: The httpx client to use.
+        http_client: The httpx2 client to use.
         url: The URL to POST to.
         job: The job (used for log context).
         **kwargs: Additional keyword arguments passed to ``http_client.post``.
 
     Returns:
-        The final httpx response (the first success, or the last response once retrying stops). The number of retries
+        The final httpx2 response (the first success, or the last response once retrying stops). The number of retries
         made and the cumulative seconds slept are recorded in ``response.extensions`` under the keys
         ``'webchanges_retries'`` and ``'webchanges_total_wait'``, so that callers can report them; when retrying stops
         because the next wait would exceed the ceiling, the server-requested delay that caused it is recorded under
@@ -1487,10 +1477,10 @@ class ImageDiffer(DifferBase):
             self.raise_import_error('pillow', e, extra='imagediff')
 
         def load_image_from_web(url: str) -> Image.Image:
-            """Fetches the image from an url with the first HTTP client available of httpx > requests > curl_cffi."""
+            """Fetches the image from an url with the first HTTP client available of httpx2 > requests > curl_cffi."""
             logger.debug('Retrieving image from %s', url)
-            if httpx is not None:
-                with httpx.stream('GET', url, timeout=10) as response:
+            if httpx2 is not None:
+                with httpx2.stream('GET', url, timeout=10) as response:
                     response.raise_for_status()
                     return Image.open(BytesIO(b''.join(response.iter_bytes())))
             if importlib.util.find_spec('requests') is not None:  # pragma: no cover
@@ -1501,7 +1491,7 @@ class ImageDiffer(DifferBase):
                 try:
                     from curl_cffi import requests as curl_cffi_requests
                 except ImportError as e:
-                    self.raise_import_error('httpx', e)
+                    self.raise_import_error('httpx2', e)
                 fallback_response = curl_cffi_requests.get(url, timeout=10)
             fallback_response.raise_for_status()  # pragma: no cover
             return Image.open(BytesIO(fallback_response.content))  # pragma: no cover
@@ -1586,10 +1576,10 @@ class ImageDiffer(DifferBase):
                 RuntimeWarning,
                 stacklevel=1,
             )
-            if httpx is None:  # pragma: no cover  # unlike jobs, the AI summaries have no requests/curl_cffi fallback
+            if httpx2 is None:  # pragma: no cover  # unlike jobs, the AI summaries have no requests/curl_cffi fallback
                 raise missing_dependency(
-                    "No module named 'httpx'",
-                    'httpx',
+                    "No module named 'httpx2'",
+                    'httpx2',
                     used_by=f"the AI summary of the '{self.__kind__}' differ",
                     location=self.job.get_indexed_location(),
                 )
@@ -1652,7 +1642,7 @@ class ImageDiffer(DifferBase):
                 }
                 data = {'file': {'display_name': 'TEXT'}}
 
-                with httpx.Client(http2=h2 is not None, timeout=self.job.timeout) as http_client:
+                with httpx2.Client(http2=h2 is not None, timeout=self.job.timeout) as http_client:
                     try:
                         response = _ai_google_post_with_retry(
                             http_client,
@@ -1662,7 +1652,7 @@ class ImageDiffer(DifferBase):
                             headers=headers,
                             json=data,
                         )
-                    except httpx.HTTPError as e:
+                    except httpx2.HTTPError as e:
                         return {'error': e, 'img_name': img_name}
                     upload_url = response.headers['X-Goog-Upload-Url']
 
@@ -1676,7 +1666,7 @@ class ImageDiffer(DifferBase):
                         response = _ai_google_post_with_retry(
                             http_client, upload_url, job=self.job, headers=headers, content=image_data
                         )
-                    except httpx.HTTPError as e:
+                    except httpx2.HTTPError as e:
                         return {'error': e, 'img_name': img_name}
 
                 # Extract file URI from response
@@ -1981,10 +1971,10 @@ class AIGoogleDiffer(DifferBase):
         Transient API errors (HTTP 429 rate-limit and 503 service-unavailable) are retried automatically via
         ``_ai_google_post_with_retry`` (up to a cumulative ``AI_GOOGLE_MAX_TOTAL_WAIT`` seconds of waiting).
         """
-        if httpx is None:  # pragma: no cover  # unlike jobs, the AI summaries have no requests/curl_cffi fallback
+        if httpx2 is None:  # pragma: no cover  # unlike jobs, the AI summaries have no requests/curl_cffi fallback
             raise missing_dependency(
-                "No module named 'httpx'",
-                'httpx',
+                "No module named 'httpx2'",
+                'httpx2',
                 used_by="the 'ai_google' differ",
                 location=job.get_indexed_location(),
             )
@@ -2045,7 +2035,7 @@ class AIGoogleDiffer(DifferBase):
             data['generationConfig'].update({'thinkingConfig': {'thinkingBudget': directives['thinking_budget']}})  # ty:ignore[no-matching-overload]
         logger.info('Job %s: Making the content generation request to Google AI model %s', job.index_number, model)
         model_version = model  # default
-        with httpx.Client(http2=h2 is not None) as http_client:
+        with httpx2.Client(http2=h2 is not None) as http_client:
             try:
                 r = _ai_google_post_with_retry(
                     http_client,
@@ -2056,7 +2046,7 @@ class AIGoogleDiffer(DifferBase):
                     headers={'Content-Type': 'application/json'},
                     timeout=timeout,
                 )
-            except httpx.HTTPError as e:
+            except httpx2.HTTPError as e:
                 summary = (
                     f'## ERROR in summarizing changes using Google AI:\n'
                     f'HTTP client error: {e} when requesting data from {e.request.url.host}'

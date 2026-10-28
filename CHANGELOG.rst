@@ -41,6 +41,13 @@ Unreleased
 
 Changed
 ```````
+* The default HTTP client is now `httpx2 <https://github.com/pydantic/httpx2>`__, the maintained successor of
+  ``httpx``, which is effectively unmaintained and has not seen a stable release since late 2024, presenting
+  significant supply chain and security risks. If it is not installed, on a temporary basis``httpx`` is used (and, failing that,
+  ``requests`` or ``curl_cffi`` as before). The ``http_client`` job directive value is now ``httpx2``; ``httpx``
+  remains accepted as an alias, so existing jobs files keep working. Unlike ``httpx``, ``httpx2`` verifies TLS
+  certificates against the operating system's certificate store (on Linux, OpenSSL's) instead of the bundle of the
+  ``certifi`` package; the ``SSL_CERT_FILE`` and ``SSL_CERT_DIR`` environment variables still override it.
 * ``ai_google`` differ: when an HTTP 429 or 503 error is not retried automatically, the error summary now states the
   specific reason (no usable retry delay in the response, or the requested delay exceeding the limit) instead of
   listing both; the total wait after retries is shown without a trailing ``.0``.
@@ -49,6 +56,25 @@ Fixed
 `````
 * ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
   descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.
+* ``url`` jobs with ``http_client: curl_cffi`` sent :program:`webchanges`' own ``User-Agent`` header instead of the
+  impersonated browser's, contradicting the browser TLS fingerprint and ``sec-ch-ua`` client hints sent alongside it
+  and so giving the job away to the bot walls ``curl_cffi`` is meant to get past. A ``User-Agent`` set in the job's
+  ``headers`` is still sent.
+
+Internals impacting hooks.py
+````````````````````````````
+* Following the switch to ``httpx2`` (see above), a ``hooks.py`` that imports ``httpx`` must be upgraded to import
+  ``httpx2`` instead (the API is the same, so ``import httpx2`` and renaming ``httpx.`` to ``httpx2.`` suffice).
+  ``httpx2`` and ``httpx`` are separate packages whose classes are unrelated, so mixing them breaks silently: a job's
+  ``headers`` built with ``httpx.Headers`` are no longer recognized as headers, and ``except httpx.HTTPError`` (or any
+  other ``httpx`` exception) no longer catches the errors raised by ``url`` jobs, which now come from ``httpx2``.
+  Also, ``UrlJob._retrieve_httpx()`` is renamed ``UrlJob._retrieve_httpx2()``, and ``JobState._http_client_used``
+  records ``httpx2`` instead of ``httpx``.
+
+Internals
+`````````
+* Replaced the vendored ``httpx`` v0.28.1 ``Headers`` class (used as a fallback when neither ``httpx2`` nor ``httpx``
+  is installed) with ``httpx2`` v2.16.0's.
 
 
 Version 3.39.0
