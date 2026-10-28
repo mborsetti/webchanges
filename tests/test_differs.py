@@ -1701,6 +1701,7 @@ def test_ai_google_post_with_retry_exceeds_ceiling_not_retried(monkeypatch: pyte
     assert result.status_code == 429
     assert client.calls == 1
     assert sleeps == []
+    assert result.extensions['webchanges_requested_delay'] == too_long
 
 
 def test_ai_google_post_with_retry_unparseable_429_not_retried(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1764,8 +1765,16 @@ def test_ai_google_send_to_model_429_summary_reports_retries(monkeypatch: pytest
     json_data = {'error': {'details': [{'@type': '.../RetryInfo', 'retryDelay': '100s'}]}}
     summary = run([_make_response(429, json_data=json_data) for _ in range(3)])
     assert 'Received error 429' in summary
-    assert 'Still failing after 2 automatic retries and 202.0 seconds of waiting' in summary
+    assert 'Still failing after 2 automatic retries and 202 seconds of waiting' in summary
 
     summary = run([_make_response(429, json_data={'error': {'message': 'rate limited'}})])
     assert 'Received error 429' in summary
-    assert 'Not retried automatically' in summary
+    assert 'Not retried automatically as the response carried no usable retry delay.' in summary
+
+    json_data = {'error': {'details': [{'@type': '.../RetryInfo', 'retryDelay': '600s'}]}}
+    summary = run([_make_response(429, json_data=json_data)])
+    assert 'Received error 429' in summary
+    assert (
+        f'Not retried automatically as the requested delay of 600 seconds exceeded the '
+        f'{AI_GOOGLE_MAX_TOTAL_WAIT}-second limit.'
+    ) in summary

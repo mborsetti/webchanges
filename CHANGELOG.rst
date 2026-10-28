@@ -39,6 +39,12 @@ Version NEXT
 -------------------
 Unreleased
 
+Changed
+```````
+* ``ai_google`` differ: when an HTTP 429 or 503 error is not retried automatically, the error summary now states the
+  specific reason (no usable retry delay in the response, or the requested delay exceeding the limit) instead of
+  listing both; the total wait after retries is shown without a trailing ``.0``.
+
 Fixed
 `````
 * ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the

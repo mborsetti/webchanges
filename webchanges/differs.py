@@ -215,7 +215,9 @@ def _ai_google_post_with_retry(
     Returns:
         The final httpx response (the first success, or the last response once retrying stops). The number of retries
         made and the cumulative seconds slept are recorded in ``response.extensions`` under the keys
-        ``'webchanges_retries'`` and ``'webchanges_total_wait'``, so that callers can report them.
+        ``'webchanges_retries'`` and ``'webchanges_total_wait'``, so that callers can report them; when retrying stops
+        because the next wait would exceed the ceiling, the server-requested delay that caused it is recorded under
+        ``'webchanges_requested_delay'``.
     """
     total_wait = 0.0
     retries = 0
@@ -245,6 +247,9 @@ def _ai_google_post_with_retry(
                 wait,
                 AI_GOOGLE_MAX_TOTAL_WAIT,
                 total_wait,
+            )
+            response.extensions['webchanges_requested_delay'] = (
+                wait - AI_GOOGLE_429_RETRY_BUFFER if response.status_code == 429 else wait
             )
             break
         total_wait += wait
@@ -2107,17 +2112,22 @@ class AIGoogleDiffer(DifferBase):
                 # retried (e.g. the response carried no parseable retry delay).
                 retries = r.extensions.get('webchanges_retries', 0)
                 total_wait = r.extensions.get('webchanges_total_wait', 0.0)
+                requested_delay = r.extensions.get('webchanges_requested_delay')
                 if retries:
                     summary += (
                         f'\n\nStill failing after {retries} automatic '
-                        f'{"retry" if retries == 1 else "retries"} and {total_wait:.1f} seconds of waiting '
+                        f'{"retry" if retries == 1 else "retries"} and '
+                        f'{f"{total_wait:.1f}".removesuffix(".0")} seconds of waiting '
                         f'(limit {AI_GOOGLE_MAX_TOTAL_WAIT} seconds).'
                     )
-                else:
+                elif requested_delay is not None:
                     summary += (
-                        '\n\nNot retried automatically (the response carried no usable retry delay, or the requested '
-                        f'delay alone exceeded the {AI_GOOGLE_MAX_TOTAL_WAIT}-second limit).'
+                        '\n\nNot retried automatically as the requested delay of '
+                        f'{f"{requested_delay:.1f}".removesuffix(".0")} seconds exceeded the '
+                        f'{AI_GOOGLE_MAX_TOTAL_WAIT}-second limit.'
                     )
+                else:
+                    summary += '\n\nNot retried automatically as the response carried no usable retry delay.'
 
         return summary, model_version
 
