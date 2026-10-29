@@ -48,7 +48,7 @@ except ImportError:
 
 
 matrix_client_is_installed = importlib.util.find_spec('matrix_client') is not None
-aioxmpp_is_installed = importlib.util.find_spec('aioxmpp') is not None
+slixmpp_is_installed = importlib.util.find_spec('slixmpp') is not None
 # pushbullet.py not maintained, breaks at Python 3.12 or 3.13. See https://pypi.org/project/pushbullet.py/
 pushbullet_broken = sys.version_info >= (3, 13) or sys.platform == 'win32'
 
@@ -185,8 +185,8 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
                 ]
             )
         case 'xmpp':
-            if not aioxmpp_is_installed:
-                pytest.skip("'aioxmpp' not installed")
+            if not slixmpp_is_installed:
+                pytest.skip("'slixmpp' not installed")
             elif NoKeyringError is not None:
                 with pytest.raises((ValueError, NoKeyringError)) as pytest_wrapped_e:
                     test_report.finish_one(reporter, check_enabled=False)
@@ -768,3 +768,72 @@ def test_slack_and_mattermost_post_to_webhook(name: str, markdown: bool, monkeyp
     text = calls[0]['json']['text']
     assert ('**CHANGED: url job**' in text or '[url job](https://example.com/)' in text) is markdown
     assert 'url job' in text
+
+
+class _FakeXmppClient:
+    """Stands in for slixmpp.ClientXMPP: connect() fires the events listed in `events`, in order."""
+
+    events: tuple[tuple[str, object], ...] = ()
+    instances: list[_FakeXmppClient] = []
+
+    def __init__(self, jid: str, password: str) -> None:
+        self.jid, self.password = jid, password
+        self.handlers: dict[str, Any] = {}
+        self.sent: list[tuple[str, str, str]] = []
+        self.disconnected = False
+        _FakeXmppClient.instances.append(self)
+
+    def add_event_handler(self, name: str, handler: Any) -> None:
+        self.handlers[name] = handler
+
+    def connect(self) -> None:
+        import asyncio
+
+        for name, data in self.events:
+            asyncio.get_running_loop().call_soon(self.handlers[name], data)
+
+    def send_message(self, mto: object, mbody: str, mtype: str) -> None:
+        self.sent.append((str(mto), mbody, mtype))
+
+    def cancel_connection_attempt(self) -> None:
+        pass
+
+    async def disconnect(self) -> None:
+        self.disconnected = True
+
+
+@pytest.mark.skipif(not slixmpp_is_installed, reason="'slixmpp' not installed")
+@pytest.mark.parametrize(
+    ('events', 'error'),
+    [
+        ((('connection_failed', 'TLS error'), ('session_start', None)), None),
+        ((('failed_all_auth', None),), 'XMPP authentication of bot@example.com failed'),
+        ((('connection_failed', 'TLS error'),), r'within 0\.1 seconds \(TLS error\)'),
+    ],
+    ids=['sent', 'auth-failed', 'timeout'],
+)
+def test_xmpp_send(events: tuple[tuple[str, object], ...], error: str | None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The XMPP class sends every chunk over one session, and disconnects whether or not a session was established."""
+    import asyncio
+
+    import slixmpp
+
+    from webchanges.reporters._chat import XMPP
+
+    monkeypatch.setattr(slixmpp, 'ClientXMPP', _FakeXmppClient)
+    monkeypatch.setattr(_FakeXmppClient, 'events', events)
+    monkeypatch.setattr(_FakeXmppClient, 'instances', [])
+    monkeypatch.setattr(XMPP, 'SESSION_TIMEOUT', 0.1)
+    xmpp = XMPP('bot@example.com', 'me@example.com', insecure_password='secret')  # noqa: S106 possible hardcoded password
+
+    if error is None:
+        asyncio.run(xmpp.send(['part 1', 'part 2']))
+    else:
+        with pytest.raises(RuntimeError, match=error):
+            asyncio.run(xmpp.send(['part 1']))
+
+    (client,) = _FakeXmppClient.instances
+    assert (client.jid, client.password) == ('bot@example.com', 'secret')
+    expected_sent = [('me@example.com', 'part 1', 'chat'), ('me@example.com', 'part 2', 'chat')]
+    assert client.sent == ([] if error else expected_sent)
+    assert client.disconnected

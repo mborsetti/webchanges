@@ -4,7 +4,6 @@
 # requires ../requirements.txt to also be installed
 -r ../requirements.txt
 
-# aioxmpp  # does not install in oct-2025 (obsolete lxml~=4.0 dependency fails to build)
 argparse-manpage  # setup.py: build_manpages
 beautifulsoup4
 chump
@@ -39,10 +38,10 @@ pytest-cov
 pytest-mock
 pytest-playwright
 python-dateutil
-# pytz  # bug in aioxmpp, which does not install in oct-2025
 redis
 requests
 ruff
+slixmpp
 tzdata; sys_platform == 'win32'
 urllib3
 vobject

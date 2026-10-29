@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 import json
 
-# Optional dependencies (aioxmpp, keyring, matrix_client) are imported inside the functions that use them, so that only
+# Optional dependencies (keyring, matrix_client, slixmpp) are imported inside the functions that use them, so that only
 # the runs that need them pay for importing them (see missing_dependency() in webchanges/util.py).
 
 logger = logging.getLogger(__name__)
@@ -282,40 +282,70 @@ class MatrixReporter(MarkdownReporter):
 
 
 class XMPP:
-    # TODO: aioxmpp unmaintained, breaks at Python 3.13; move to https://pypi.org/project/slixmpp/
+    """Sends chat messages using the slixmpp library."""
+
+    # Seconds to wait for a session: slixmpp retries a failed connection forever, so this bounds a run
+    SESSION_TIMEOUT = 60
+
     def __init__(self, sender: str, recipient: str, insecure_password: str | None = None) -> None:
+        # slixmpp warns on import when installed without its optional (Rust) JID extension, as on Windows
+        logging.getLogger('slixmpp.stringprep').setLevel(logging.ERROR)
         try:
-            import aioxmpp  # ty:ignore[unresolved-import]  # noqa: F401 imported but unused (checks that it loads)
+            import slixmpp  # noqa: F401 imported but unused (checks that it loads)
         except ImportError as e:  # pragma: no cover
-            raise missing_dependency(e, 'aioxmpp', used_by="the 'xmpp' reporter", extra='xmpp') from e
+            raise missing_dependency(e, 'slixmpp', used_by="the 'xmpp' reporter", extra='xmpp') from e
         self.sender = sender
         self.recipient = recipient
         self.insecure_password = insecure_password
 
-    async def send(self, chunk: str) -> None:
-        import aioxmpp  # ty:ignore[unresolved-import]  # availability already checked by __init__()
-
+    def _password(self) -> str:
         if self.insecure_password:
-            password = self.insecure_password
-        else:
-            keyring = import_keyring(used_by="the 'xmpp' reporter's password (as no 'insecure_password' is set)")
-            passw = keyring.get_password('urlwatch_xmpp', self.sender)
-            if passw is None:
-                raise ValueError(f'No password available in keyring for {self.sender}')
-            password = passw
+            return self.insecure_password
+        keyring = import_keyring(used_by="the 'xmpp' reporter's password (as no 'insecure_password' is set)")
+        password = keyring.get_password('urlwatch_xmpp', self.sender)
+        if password is None:
+            raise ValueError(f'No password available in keyring for {self.sender}')
+        return password
 
-        jid = aioxmpp.JID.fromstr(self.sender)
-        client = aioxmpp.PresenceManagedClient(jid, aioxmpp.make_security_layer(password))
-        recipient_jid = aioxmpp.JID.fromstr(self.recipient)
+    async def send(self, chunks: Iterable[str]) -> None:
+        """Connects to the sender's server, sends each chunk as a chat message to the recipient, and disconnects.
 
-        async with client.connected() as stream:
-            msg = aioxmpp.Message(
-                to=recipient_jid,
-                type_=aioxmpp.MessageType.CHAT,
-            )
-            msg.body[None] = chunk
+        :param chunks: The messages to send.
+        :raises RuntimeError: If authentication fails or no session is established within SESSION_TIMEOUT seconds.
+        """
+        import slixmpp  # availability already checked by __init__()
 
-            await stream.send_and_wait_for_sent(msg)
+        client = slixmpp.ClientXMPP(self.sender, self._password())
+        session: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        connection_errors: list[object] = []
+
+        def session_started(_event: object) -> None:
+            if not session.done():
+                session.set_result(None)
+
+        def authentication_failed(_event: object) -> None:
+            if not session.done():
+                session.set_exception(RuntimeError(f'XMPP authentication of {self.sender} failed'))
+
+        client.add_event_handler('session_start', session_started)
+        client.add_event_handler('failed_all_auth', authentication_failed)
+        # a failed attempt is not final: slixmpp tries the next transport (direct TLS, STARTTLS), then reschedules
+        client.add_event_handler('connection_failed', connection_errors.append)
+        client.connect()
+        try:
+            try:
+                await asyncio.wait_for(session, self.SESSION_TIMEOUT)
+            except TimeoutError:
+                reason = f' ({connection_errors[-1]})' if connection_errors else ''
+                raise RuntimeError(
+                    f'No XMPP session established for {self.sender} within {self.SESSION_TIMEOUT} seconds{reason}'
+                ) from None
+            recipient = slixmpp.JID(self.recipient)
+            for chunk in chunks:
+                client.send_message(mto=recipient, mbody=chunk, mtype='chat')
+        finally:
+            client.cancel_connection_attempt()
+            await client.disconnect()  # sends what is queued first
 
 
 def xmpp_have_password(sender: str) -> bool:
@@ -349,9 +379,7 @@ class XMPPReporter(TextReporter):
             return
 
         xmpp = XMPP(sender, recipient, self.config['insecure_password'])
-
-        for chunk in chunk_string(text, self.MAX_LENGTH, numbering=True):
-            asyncio.run(xmpp.send(chunk))
+        asyncio.run(xmpp.send(chunk_string(text, self.MAX_LENGTH, numbering=True)))
 
 
 class GotifyReporter(MarkdownReporter):

@@ -650,7 +650,8 @@ differ:
             a tracked issue with labels, assignees and milestone; <code>browser</code> opens the HTML report locally;
             <code>run_command</code> passes <code>{count}</code>, <code>{jobs}</code> and <code>{text}</code> plus the
             <code>WEBCHANGES_*_JSON</code> environment variables; <code>telegram</code> keeps bold, italics,
-            strikethrough and links.
+            strikethrough and links; and <code>xmpp</code> installs on current Pythons, while urlwatch's depends on
+            the abandoned <code>aioxmpp</code>.
           </li>
           <li>
             You want <strong>snapshots you can trust</strong>: they are saved only after the reports have been sent;
@@ -704,6 +705,10 @@ differ:
                 <code>pyhtml2text</code>, <code>re</code> and <code>lynx</code> (which uses the default method)
               </li>
               <li>Reporters <code>slack</code>, <code>mattermost</code> and <code>shell</code></li>
+              <li>
+                The <code>xmpp</code> reporter's configuration and keyring password (install
+                <code>webchanges[xmpp]</code>, which uses <code>slixmpp</code>)
+              </li>
               <li>
                 <code>--urls</code>, <code>--cache</code>, <code>--gc-cache</code>, <code>--test-filter</code>,
                 <code>--test-diff-filter</code>, <code>--enable</code>, <code>--disable</code>, and selecting a job by
@@ -1043,11 +1048,20 @@ differ:
                 Common: <code>stdout</code>, <code>email</code> (SMTP or sendmail), <code>mailgun</code>,
                 <code>telegram</code>, <code>matrix</code>, <code>gotify</code>, <code>ntfy</code>,
                 <code>pushover</code>, <code>pushbullet</code>, <code>prowl</code>, <code>ifttt</code>,
-                <code>xmpp</code>, <code>discord</code>
+                <code>discord</code>
               </td>
               <td class="center yes">&check;</td>
               <td class="center yes">&check;</td>
               <td>Both broad.</td>
+            </tr>
+            <tr>
+              <td><code>xmpp</code></td>
+              <td class="center yes">&check;</td>
+              <td class="center no">does not install</td>
+              <td>
+                webchanges uses the maintained <code>slixmpp</code>. urlwatch's needs <code>aioxmpp</code>, abandoned
+                since its last release in February 2023, which does not install on Python 3.13 or later.
+              </td>
             </tr>
             <tr>
               <td><code>github_issue</code></td>

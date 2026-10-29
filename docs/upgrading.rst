@@ -95,6 +95,11 @@ Actively maintained
 Releases ship regularly, supporting Python 3.12 to 3.15 (including the free-threaded build), and every release is
 tested on Linux, macOS and Windows.
 
+Libraries abandoned by their maintainers are replaced rather than left to break. The ``xmpp`` reporter uses the
+maintained ``slixmpp``: the ``aioxmpp`` library that :program:`urlwatch`'s ``xmpp`` reporter still requires has had no
+release since February 2023, its maintainer has announced that there will be none, and it does not install on Python
+3.13 or later. Likewise, HTTP requests use ``httpx2``, the maintained successor of ``httpx``.
+
 
 Switching from urlwatch
 -----------------------
@@ -238,6 +243,8 @@ None of these need an edit, but they change what you see:
 * Jobs in reports are sorted alphabetically by name.
 * The ``telegram`` reporter's ``monospace`` sub-directive has no effect, as reports are sent in Markdown; it is
   reported as unrecognized.
+* The ``xmpp`` reporter uses the ``slixmpp`` package instead of ``aioxmpp``; install it with
+  ``pip install webchanges[xmpp]``. Its configuration and the password stored in the keyring carry over.
 * When run from a terminal, ``--enable``, ``--disable`` and ``--delete`` ask for confirmation before rewriting the
   jobs file, which (as in :program:`urlwatch`) loses all its remarks (see :ref:`enable_disable`).
 * A job selected on the command line by its URL, command or name must match one job only; if it matches several, the
