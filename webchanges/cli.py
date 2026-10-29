@@ -707,7 +707,6 @@ def _dependencies() -> list[str]:
     # default list of all possible dependencies
     logger.info('Found no pip distribution for %s; returning all possible dependencies.', __project_name__)
     deps = [
-        'aioxmpp',
         'beautifulsoup4',
         'chump',
         'cryptography',
@@ -740,6 +739,7 @@ def _dependencies() -> list[str]:
         'pyyaml',
         'redis',
         'requests',
+        'slixmpp',
         'typeguard',
         'typing-extensions',
         'tzdata',

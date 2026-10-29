@@ -91,7 +91,7 @@ imagediff = ['Pillow']
 matrix = ['matrix_client']
 pushbullet = ['pushbullet.py']
 pushover = ['chump']
-xmpp = ['aioxmpp']
+xmpp = ['slixmpp']
 # other
 curl_cffi = ['curl_cffi']
 redis = ['redis']

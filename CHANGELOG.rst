@@ -48,6 +48,16 @@ Changed
   remains accepted as an alias, so existing jobs files keep working. Unlike ``httpx``, ``httpx2`` verifies TLS
   certificates against the operating system's certificate store (on Linux, OpenSSL's) instead of the bundle of the
   ``certifi`` package; the ``SSL_CERT_FILE`` and ``SSL_CERT_DIR`` environment variables still override it.
+* The ``xmpp`` reporter works again: it now uses the maintained `slixmpp <https://pypi.org/project/slixmpp/>`__
+  library instead of ``aioxmpp``, which is dead. ``aioxmpp``'s last release (0.13.3) dates from 5 February 2023 and
+  declares support for Python up to 3.9; on 14 January 2024 its sole maintainer announced that there will be no
+  further releases and that access to the PyPI project and repository will not be handed over, so it cannot be revived
+  under its name. It does not install on Python 3.13 or later: it pins ``lxml`` to the 4.x series, whose last release
+  (4.9.4, of December 2023) has no wheels beyond Python 3.12, so the ``xmpp`` reporter had been unusable (and untested)
+  on current Pythons. The reporter's
+  configuration and the password stored in the keyring (``--xmpp-login``) are unchanged; install the new library with
+  ``pip install --upgrade webchanges[xmpp]``. The connection is now made once for all the messages of a report rather
+  than once per message, and gives up with an error after 60 seconds if no session can be established.
 * ``ai_google`` differ: when an HTTP 429 or 503 error is not retried automatically, the error summary now states the
   specific reason (no usable retry delay in the response, or the requested delay exceeding the limit) instead of
   listing both; the total wait after retries is shown without a trailing ``.0``.
