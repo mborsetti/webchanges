@@ -1346,7 +1346,7 @@ def builtin_checker_lookup(
         return check_typed_dict
     elif isclass(origin_type) and issubclass(
         origin_type,
-        Tuple,  # type: ignore[arg-type]
+        Tuple,
     ):
         # NamedTuple
         return check_tuple

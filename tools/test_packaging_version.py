@@ -228,7 +228,7 @@ class TestVersion:
     @pytest.mark.parametrize('version', [None, 1, ['1', '.', '0'], ('1',), b'1.0'])
     def test_non_string_versions_raise_invalid_version(self, version: object) -> None:
         with pytest.raises(InvalidVersion):
-            Version(version)  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+            Version(version)  # ty:ignore[invalid-argument-type]
 
     @pytest.mark.skipif(
         not hasattr(sys, 'get_int_max_str_digits'),
@@ -1109,17 +1109,17 @@ class TestVersion:
     def test_replace_invalid_epoch_type(self) -> None:
         v = Version('1.2.3')
         with pytest.raises(InvalidVersion, match='epoch must be non-negative'):
-            replace(v, epoch='1')  # type: ignore[arg-type]
+            replace(v, epoch='1')
 
     def test_replace_invalid_post_type(self) -> None:
         v = Version('1.2.3')
         with pytest.raises(InvalidVersion, match='post must be non-negative'):
-            replace(v, post='1')  # type: ignore[arg-type]
+            replace(v, post='1')
 
     def test_replace_invalid_dev_type(self) -> None:
         v = Version('1.2.3')
         with pytest.raises(InvalidVersion, match='dev must be non-negative'):
-            replace(v, dev='1')  # type: ignore[arg-type]
+            replace(v, dev='1')
 
     def test_replace_invalid_epoch_negative(self) -> None:
         v = Version('1.2.3')
@@ -1149,11 +1149,11 @@ class TestVersion:
     def test_replace_invalid_pre_format(self) -> None:
         v = Version('1.2.3')
         with pytest.raises(InvalidVersion, match='pre must be a tuple'):
-            replace(v, pre='a1')  # type: ignore[arg-type]
+            replace(v, pre='a1')
         with pytest.raises(InvalidVersion, match='pre must be a tuple'):
-            replace(v, pre=('a',))  # type: ignore[arg-type]
+            replace(v, pre=('a',))
         with pytest.raises(InvalidVersion, match='pre must be a tuple'):
-            replace(v, pre=('a', 1, 2))  # type: ignore[arg-type]
+            replace(v, pre=('a', 1, 2))
 
     def test_replace_invalid_post_negative(self) -> None:
         v = Version('1.2.3')
@@ -1251,7 +1251,7 @@ def test_from_parts_rejects_non_str_pre_letter() -> None:
     # A non-string pre letter must raise InvalidVersion rather than escaping
     # as an AttributeError from the normalization step.
     with pytest.raises(InvalidVersion, match='pre must be a tuple'):
-        Version.from_parts(release=(1,), pre=(1, 1))  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+        Version.from_parts(release=(1,), pre=(1, 1))  # ty:ignore[invalid-argument-type]
 
 
 @pytest.mark.parametrize(

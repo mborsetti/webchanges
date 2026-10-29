@@ -226,7 +226,7 @@ class Headers(typing.MutableMapping[str, str]):
             split_values.extend([item.strip() for item in value.split(",")])
         return split_values
 
-    def update(self, headers: HeaderTypes | None = None) -> None:  # type: ignore
+    def update(self, headers: HeaderTypes | None = None) -> None:  # ty: ignore[invalid-method-override]
         headers = Headers(headers)
         for key in headers.keys():
             if key in self:
