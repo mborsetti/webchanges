@@ -533,7 +533,7 @@ def _validate_pre(value: object, /) -> tuple[Literal["a", "b", "rc"], int] | Non
             and number >= 0
         ):
             # checkers can't infer the Literal type here on letter
-            return (normalized, number)  # type: ignore[return-value]
+            return (normalized, number)
     msg = f"pre must be a tuple of ('a'|'b'|'rc', non-negative int), got {value}"
     raise InvalidVersion(msg)
 
@@ -692,11 +692,11 @@ class Version(_BaseVersion):
         self._release = tuple(map(int, match.group("release").split(".")))
         # We can type ignore the assignments below because the regex guarantees
         # the correct strings
-        self._pre = _parse_letter_version(match.group("pre_l"), match.group("pre_n"))  # type: ignore[assignment]  # ty:ignore[invalid-assignment]
-        self._post = _parse_letter_version(  # type: ignore[assignment]  # ty:ignore[invalid-assignment]
+        self._pre = _parse_letter_version(match.group("pre_l"), match.group("pre_n"))  # ty:ignore[invalid-assignment]
+        self._post = _parse_letter_version(  # ty:ignore[invalid-assignment]
             match.group("post_l"), match.group("post_n1") or match.group("post_n2")
         )
-        self._dev = _parse_letter_version(match.group("dev_l"), match.group("dev_n"))  # type: ignore[assignment]  # ty:ignore[invalid-assignment]
+        self._dev = _parse_letter_version(match.group("dev_l"), match.group("dev_n"))  # ty:ignore[invalid-assignment]
         self._local = _parse_local_version(match.group("local"))
 
         # Key which will be used for sorting
