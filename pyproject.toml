@@ -407,14 +407,11 @@ docstring-code-line-length = 'dynamic'
 # -------------------------- ty --------------------------
 # Config file documentation at https://docs.astral.sh/ty/reference/configuration/
 
+# A ty.toml (e.g. one adding machine-specific interpreter paths) replaces this section entirely, so keep its other
+# settings the same as here. 'tools' is needed to resolve the scripts there that tests import after adding the
+# directory to sys.path at runtime (e.g. update_schema_hashes in tests/test_cli.py), which ty cannot follow.
 [tool.ty.environment]
-extra-paths = ['webchanges']
+extra-paths = ['webchanges', 'tools']
 
 [tool.ty.src]
-exclude = ["./webchanges/.**", "./webchanges/stora_minidb.py"]
-
-[[tool.ty.overrides]]
-include = ["./webchanges/storage/_minidb.py"]
-
-[tool.ty.overrides.rules]
-all = "ignore"
+exclude = ["./webchanges/.**", "./webchanges/storage/_minidb.py"]
