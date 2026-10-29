@@ -60,6 +60,9 @@ Fixed
   impersonated browser's, contradicting the browser TLS fingerprint and ``sec-ch-ua`` client hints sent alongside it
   and so giving the job away to the bot walls ``curl_cffi`` is meant to get past. A ``User-Agent`` set in the job's
   ``headers`` is still sent.
+* ``url`` jobs with ``use_browser: true``, ``initialization_url`` and ``initialization_js`` failed when
+  ``wait_for_url`` was a dict (of Playwright options) instead of a string, and an invalid ``wait_for_url`` raised an
+  ``AttributeError`` instead of the intended error message.
 
 Internals impacting hooks.py
 ````````````````````````````

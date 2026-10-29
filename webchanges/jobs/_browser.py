@@ -320,6 +320,24 @@ class BrowserJob(UrlJobBase):
             platform_string = f'{system_name}; {machine_arch}'
         return platform_string
 
+    def _wait_for_url(self, page: Page, timeout: float | None = None) -> None:
+        """Waits for the page to navigate to the URL of the 'wait_for_url' directive (a string or a dict of options).
+
+        :param page: The Playwright page.
+        :param timeout: The timeout in milliseconds when 'wait_for_url' is a string (None for Playwright's default).
+        :raises ValueError: If 'wait_for_url' is neither a string nor a dict.
+        """
+        logger.info('Job %s: Waiting for page to navigate to %s', self.index_number, self.wait_for_url)
+        if isinstance(self.wait_for_url, str):
+            page.wait_for_url(self.wait_for_url, wait_until=self.wait_until, timeout=timeout)
+        elif isinstance(self.wait_for_url, dict):
+            page.wait_for_url(**self.wait_for_url)
+        else:
+            raise ValueError(
+                f"Job {self.index_number}: Directive 'wait_for_url' can only be a string or a dictionary; found a "
+                f'{type(self.wait_for_url).__name__} ( {self.get_indexed_location()} ).'
+            )
+
     def _save_error_files(
         self,
         page: Page,
@@ -684,8 +702,7 @@ class BrowserJob(UrlJobBase):
                     logger.info("Job %s: Running init script '%s'", self.index_number, self.initialization_js)
                     page.evaluate(self.initialization_js)
                     if self.wait_for_url:
-                        logger.info('Job %s: Waiting for page to navigate to %s', self.index_number, self.wait_for_url)
-                        page.wait_for_url(self.wait_for_url, wait_until=self.wait_until)  # ty:ignore[invalid-argument-type]
+                        self._wait_for_url(page)
                 updated_url = page.url
                 init_url_params = dict(parse_qsl(urlparse(updated_url).params))
                 try:
@@ -828,21 +845,7 @@ class BrowserJob(UrlJobBase):
                                 status_code=EMPTY_RESPONSE_STATUS_CODE,
                             )
                     if self.wait_for_url:
-                        logger.info('Job %s: Waiting for page to navigate to %s', self.index_number, self.wait_for_url)
-                        if isinstance(self.wait_for_url, str):
-                            page.wait_for_url(
-                                self.wait_for_url,
-                                wait_until=self.wait_until,
-                                timeout=timeout,
-                            )
-                        elif isinstance(self.wait_for_url, dict):
-                            page.wait_for_url(**self.wait_for_url)
-                        else:
-                            raise ValueError(
-                                f"Job {job_state.job.index_number}: Directive 'wait_for_url' can only be a string or a "
-                                f'dictionary; found a {type(self.wait_for_url.__name__)} '
-                                f'( {self.get_indexed_location()} ).'
-                            )
+                        self._wait_for_url(page, timeout)
                     if self.wait_for_selector:
                         logger.info('Job %s: Waiting for selector %s', self.index_number, self.wait_for_selector)
                         if not isinstance(self.wait_for_selector, list):
