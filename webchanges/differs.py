@@ -1682,7 +1682,7 @@ class ImageDiffer(DifferBase):
                 }
 
             # upload to Google
-            additional_parts: list[dict[str, dict[str, str]]] = []
+            additional_parts: list[dict[str, Any]] = []
             executor = ThreadPoolExecutor()
             for additional_part in executor.map(
                 _load_image,
@@ -1693,7 +1693,7 @@ class ImageDiffer(DifferBase):
                 ),
             ):
                 if 'error' not in additional_part:
-                    additional_parts.append(additional_part)  # ty:ignore[invalid-argument-type]
+                    additional_parts.append(additional_part)
                 else:
                     logger.error(
                         'Job %s: ai_google for %s HTTP Client error %s when loading %s to Google AI: %s',
@@ -1751,7 +1751,7 @@ class ImageDiffer(DifferBase):
                 self.job,
                 system_instructions,
                 model_prompt,
-                additional_parts=additional_parts,  # ty:ignore[invalid-argument-type]
+                additional_parts=additional_parts,
                 directives=directives,
             )
 
@@ -1963,7 +1963,7 @@ class AIGoogleDiffer(DifferBase):
         job: JobBase,
         system_instructions: str,
         model_prompt: str,
-        additional_parts: list[dict[str, str | dict[str, str]]] | None = None,
+        additional_parts: list[dict[str, Any]] | None = None,
         directives: AiGoogleDirectives | None = None,
     ) -> tuple[str, str]:
         """Creates the summary request to the model; returns the summary and the version of the actual model used.
@@ -2013,26 +2013,28 @@ class AIGoogleDiffer(DifferBase):
                 '',
             )
 
+        parts: list[dict[str, Any]] = [{'text': model_prompt}]
+        if directives.get('media_resolution'):
+            parts[0]['mediaResolution'] = {'level': directives['media_resolution']}
+        if additional_parts:
+            parts.extend(additional_parts)
+        generation_config: dict[str, Any] = {
+            'maxOutputTokens': max_output_tokens,
+            'temperature': temperature,
+            'topP': top_p,
+            'topK': top_k,
+        }
+        if directives.get('thinking_level'):
+            generation_config['thinkingConfig'] = {'thinkingLevel': directives['thinking_level']}
+        elif directives.get('thinking_budget'):
+            generation_config['thinkingConfig'] = {'thinkingBudget': directives['thinking_budget']}
         data: dict[str, Any] = {
             'system_instruction': {'parts': [{'text': system_instructions}]},
-            'contents': [{'parts': [{'text': model_prompt}]}],
-            'generationConfig': {
-                'maxOutputTokens': max_output_tokens,
-                'temperature': temperature,
-                'topP': top_p,
-                'topK': top_k,
-            },
+            'contents': [{'parts': parts}],
+            'generationConfig': generation_config,
         }
-        if additional_parts:
-            data['contents'][0]['parts'].extend(additional_parts)  # ty:ignore[invalid-argument-type]
-        if directives.get('media_resolution'):
-            data['contents'][0]['parts'][0]['mediaResolution'] = {'level': directives['media_resolution']}  # ty:ignore[invalid-assignment]
         if directives.get('tools'):
             data['tools'] = directives['tools']
-        if directives.get('thinking_level'):
-            data['generationConfig'].update({'thinkingConfig': {'thinkingLevel': directives['thinking_level']}})  # ty:ignore[no-matching-overload]
-        elif directives.get('thinking_budget'):
-            data['generationConfig'].update({'thinkingConfig': {'thinkingBudget': directives['thinking_budget']}})  # ty:ignore[no-matching-overload]
         logger.info('Job %s: Making the content generation request to Google AI model %s', job.index_number, model)
         model_version = model  # default
         with httpx2.Client(http2=h2 is not None) as http_client:

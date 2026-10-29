@@ -204,6 +204,9 @@ class BrowserJob(UrlJobBase):
     )
 
     use_browser = True
+    # re-declared because retrieve() assigns it (to replace a deprecated value), from which ty would otherwise infer a
+    # BrowserJob attribute of type str
+    wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None
 
     # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
     chromium_connection_errors = (  # range 100-199 Connection related errors
@@ -666,7 +669,7 @@ class BrowserJob(UrlJobBase):
                 try:
                     response = page.goto(
                         self.initialization_url,
-                        wait_until=self.wait_until,  # ty:ignore[invalid-argument-type]
+                        wait_until=self.wait_until,
                     )
                 except PlaywrightError as e:
                     logger.info('Job %s: Website initialization page returned error %s', self.index_number, e)
@@ -770,10 +773,11 @@ class BrowserJob(UrlJobBase):
                 logger.info(
                     "Job %s: Found 'block_elements' and adding a route to intercept elements", self.index_number
                 )
+                blocked_resource_types = set(self.block_elements)
 
                 def handle_elements(route: Route) -> None:
                     """Handler function to block elements (a pyee.EventEmitter callback)."""
-                    if route.request.resource_type in self.block_elements:  # ty:ignore[unsupported-operator]
+                    if route.request.resource_type in blocked_resource_types:
                         logger.debug(
                             "Job %s: Intercepted retrieval of resource_type '%s' and aborting",
                             self.index_number,
@@ -794,12 +798,12 @@ class BrowserJob(UrlJobBase):
             try:
                 if return_data is not None:
                     logger.info("Job %s: Using the 'return_data' Callable", self.index_number)
-                    return return_data(page, url, self.wait_until, self.referer)  # ty:ignore[invalid-argument-type]
+                    return return_data(page, url, self.wait_until, self.referer)
                 if response_handler is not None:
                     logger.info("Job %s: Using the 'response_handler' Callable", self.index_number)
-                    response = response_handler(page, url, self.wait_until, self.referer)  # ty:ignore[invalid-argument-type]
+                    response = response_handler(page, url, self.wait_until, self.referer)
                 else:
-                    response = page.goto(url, wait_until=self.wait_until, referer=self.referer)  # ty:ignore[invalid-argument-type]
+                    response = page.goto(url, wait_until=self.wait_until, referer=self.referer)
 
                 if not response:
                     raise BrowserResponseError(('No response received from browser on navigation',))
@@ -828,7 +832,7 @@ class BrowserJob(UrlJobBase):
                         if isinstance(self.wait_for_url, str):
                             page.wait_for_url(
                                 self.wait_for_url,
-                                wait_until=self.wait_until,  # ty:ignore[invalid-argument-type]
+                                wait_until=self.wait_until,
                                 timeout=timeout,
                             )
                         elif isinstance(self.wait_for_url, dict):

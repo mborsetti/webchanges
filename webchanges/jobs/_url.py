@@ -415,7 +415,7 @@ class UrlJob(UrlJobBase):
         # Save the media type (fka MIME type)
         mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
-        if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
+        if FilterBase.filter_chain_needs_bytes(self.filters):
             return response.content, etag, mime_type
 
         if self.encoding:
@@ -515,7 +515,7 @@ class UrlJob(UrlJobBase):
         # Save the media type (fka MIME type)
         mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
-        if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
+        if FilterBase.filter_chain_needs_bytes(self.filters):
             return response.content, etag, mime_type
 
         if self.encoding:
@@ -642,7 +642,7 @@ class UrlJob(UrlJobBase):
         # Save the media type (fka MIME type)
         mime_type = response.headers.get('Content-Type', '').split(';')[0]
 
-        if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
+        if FilterBase.filter_chain_needs_bytes(self.filters):
             return response.content, etag, mime_type
 
         if self.encoding:
@@ -727,7 +727,7 @@ class UrlJob(UrlJobBase):
         else:
             filename = Path(str(urlparse(self.url).path))
 
-        if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
+        if FilterBase.filter_chain_needs_bytes(self.filters):
             return filename.read_bytes(), '', 'application/octet-stream'
         return filename.read_text(), '', 'text/plain'
 
@@ -746,7 +746,7 @@ class UrlJob(UrlJobBase):
             str(password),
             timeout=self.timeout,
         ) as ftp:
-            if FilterBase.filter_chain_needs_bytes(self.filters):  # ty:ignore[invalid-argument-type]
+            if FilterBase.filter_chain_needs_bytes(self.filters):
                 data_bytes = b''
 
                 def callback_bytes(dt: bytes) -> None:

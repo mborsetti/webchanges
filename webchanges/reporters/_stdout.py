@@ -17,6 +17,8 @@ from webchanges.reporters._base import TextReporter
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
+    from webchanges.storage import _ConfigReportStdout
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,12 +61,12 @@ class StdoutReporter(TextReporter):
 
     __kind__ = 'stdout'
 
+    config: _ConfigReportStdout
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._has_color = bool(
-            sys.stdout.isatty() and self.config['color'] and _enable_windows_ansi()  # ty:ignore[invalid-key]
-        )
-        self._color_code = '3' if self.config['color'] == 'normal' else '9'  # ty:ignore[invalid-key]
+        self._has_color = bool(sys.stdout.isatty() and self.config['color'] and _enable_windows_ansi())
+        self._color_code = '3' if self.config['color'] == 'normal' else '9'
 
     def _incolor(self, color_id: int, s: str) -> str:
         if self._has_color:
