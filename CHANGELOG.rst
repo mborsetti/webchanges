@@ -47,80 +47,54 @@ Added
 
 Changed
 ```````
-* The default HTTP client is now `httpx2 <https://github.com/pydantic/httpx2>`__, the maintained successor of
-  ``httpx``, which is effectively unmaintained and has not seen a stable release since late 2024, presenting
-  significant supply chain and security risks. If it is not installed, on a temporary basis``httpx`` is used (and, failing that,
-  ``requests`` or ``curl_cffi`` as before). The ``http_client`` job directive value is now ``httpx2``; ``httpx``
-  remains accepted as an alias, so existing jobs files keep working. Unlike ``httpx``, ``httpx2`` verifies TLS
-  certificates against the operating system's certificate store (on Linux, OpenSSL's) instead of the bundle of the
-  ``certifi`` package; the ``SSL_CERT_FILE`` and ``SSL_CERT_DIR`` environment variables still override it.
+* To minimize supply chain and security risks, the default HTTP client is now
+  `httpx2 <https://github.com/pydantic/httpx2>`__, as ``httpx`` has not seen a stable release since late 2024. If it
+  is not installed, on a temporary basis ``httpx`` is used if found (and, failing that, ``requests`` or ``curl_cffi``
+  as before). The ``http_client`` job directive value is now ``httpx2``; ``httpx`` remains accepted as an alias, so
+  existing jobs files keep working. Unlike ``httpx``, ``httpx2`` verifies TLS certificates against the operating
+  system's certificate store (on Linux, OpenSSL's) instead of the bundle of the ``certifi`` package; the
+  ``SSL_CERT_FILE`` and ``SSL_CERT_DIR`` environment variables still override it.
 * The ``xmpp`` reporter works again: it now uses the maintained `slixmpp <https://pypi.org/project/slixmpp/>`__
-  library instead of ``aioxmpp``, which is dead. ``aioxmpp``'s last release (0.13.3) dates from 5 February 2023 and
-  declares support for Python up to 3.9; on 14 January 2024 its sole maintainer announced that there will be no
-  further releases and that access to the PyPI project and repository will not be handed over, so it cannot be revived
-  under its name. It does not install on Python 3.13 or later: it pins ``lxml`` to the 4.x series, whose last release
-  (4.9.4, of December 2023) has no wheels beyond Python 3.12, so the ``xmpp`` reporter had been unusable (and untested)
-  on current Pythons. The reporter's
-  configuration and the password stored in the keyring (``--xmpp-login``) are unchanged; install the new library with
-  ``pip install --upgrade webchanges[xmpp]``. The connection is now made once for all the messages of a report rather
-  than once per message, and gives up with an error after 60 seconds if no session can be established.
-* An error in the configuration or jobs file found when starting (e.g. a YAML syntax error, an unrecognized directive
-  or a value of the wrong type) is now shown as its message only, and :program:`webchanges` exits with code 1; it was
-  preceded by a Python traceback that buried it. Run with ``-v`` to also show the traceback.
-* A wrong setting of a filter, differ or reporter is now also shown as its message only, without a Python
-  traceback: for a filter or differ in the job's report (e.g. "Unknown method bogus for filter 'html2text'. (Job 1:
-  ...)"), and for a reporter, or an unknown ``differ`` name, as the message on exit with code 1 (these stop the run,
-  as the reports cannot be sent). Invalid regular expressions, CSS selectors, XPath expressions and ``jq`` queries
-  are reported the same way, naming the filter and the expression.
-* ``ai_google`` differ: when an HTTP 429 or 503 error is not retried automatically, the error summary now states the
-  specific reason (no usable retry delay in the response, or the requested delay exceeding the limit) instead of
-  listing both; the total wait after retries is shown without a trailing ``.0``.
+  library instead of ``aioxmpp``, which is dead and could no longer be successfully installed. The connection is now
+  made once for all the messages of a report rather than once per message, and gives up after 60 seconds if no session
+  can be established.
+* Errors in the configuration or jobs file found at startup, and wrong settings of a filter, differ or reporter, are
+  no longer buried in a Python traceback.
 
 Fixed
 `````
 * The JSON schemas that :program:`webchanges` copies next to ``config.yaml`` and ``jobs.yaml`` (``config.schema.json``
   and ``jobs.schema.json``, used by editors for autocompletion and validation) were never copied when installed with
   ``pip`` or ``uv``, as the package lacked the files used to detect whether they need updating.
-* ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
-  descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.
-* ``url`` jobs with ``http_client: curl_cffi`` sent :program:`webchanges`' own ``User-Agent`` header instead of the
-  impersonated browser's, contradicting the browser TLS fingerprint and ``sec-ch-ua`` client hints sent alongside it
-  and so giving the job away to the bot walls ``curl_cffi`` is meant to get past. A ``User-Agent`` set in the job's
+* ``url`` jobs with ``http_client: curl_cffi`` defaulted to sending :program:`webchanges`' own ``User-Agent`` header
+  instead of the impersonated browser's, contradicting the browser TLS fingerprint. A ``User-Agent`` set in the job's
   ``headers`` is still sent.
 * ``url`` jobs with ``use_browser: true``, ``initialization_url`` and ``initialization_js`` failed when
-  ``wait_for_url`` was a dict (of Playwright options) instead of a string, and an invalid ``wait_for_url`` raised an
-  ``AttributeError`` instead of the intended error message.
-* The error for a configuration value of the wrong type ended with a stray closing parenthesis.
-* ``keep_lines_containing`` and ``delete_lines_containing`` filters: an invalid regular expression in ``re`` was
-  reported as a confusing ``KeyError: 'pattern'`` instead of the regular expression's error.
-* ``html2text`` filter: a sub-directive that its method does not use, e.g. a misspelled one such as ``metod`` or
-  ``pad_table``, was silently ignored (the ``html2text`` package accepts any name as an option, and ignores those it
-  does not know); it now stops the job with an error naming it and suggesting the closest sub-directive (e.g. "did you
-  mean 'pad_tables'?"). The options accepted by the default method are those of the ``html2text`` package's parser,
-  as of its version 2025.4.15, and are listed in the documentation.
+  ``wait_for_url`` was a dict (of Playwright options), and an invalid ``wait_for_url`` raised an ``AttributeError``
+  instead of the intended error message.
+* ``keep_lines_containing`` and  ``delete_lines_containing`` filters: Improved error messages for invalid regular
+  expression in ``re``.
+* ``html2text`` filter: Sub-directives are now checked and misspelled ones such as ``pad_table``, which were silently
+  ignored, now raise an error.
+* ``ai_google`` differ: Improved retry error messages.
+* ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
+  descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.
 
 Internals impacting hooks.py
 ````````````````````````````
 * Following the switch to ``httpx2`` (see above), a ``hooks.py`` that imports ``httpx`` must be upgraded to import
   ``httpx2`` instead (the API is the same, so ``import httpx2`` and renaming ``httpx.`` to ``httpx2.`` suffice).
-  ``httpx2`` and ``httpx`` are separate packages whose classes are unrelated, so mixing them breaks silently: a job's
-  ``headers`` built with ``httpx.Headers`` are no longer recognized as headers, and ``except httpx.HTTPError`` (or any
-  other ``httpx`` exception) no longer catches the errors raised by ``url`` jobs, which now come from ``httpx2``.
-  Also, ``UrlJob._retrieve_httpx()`` is renamed ``UrlJob._retrieve_httpx2()``, and ``JobState._http_client_used``
-  records ``httpx2`` instead of ``httpx``.
-* New ``webchanges.util.SettingError`` (a subclass of ``ValueError``) for a wrong setting the user made: its message
-  is shown without a traceback (see above), so a custom filter, differ or reporter in ``hooks.py`` can raise it too.
-  The settings errors of the bundled filters, differs and reporters are now ``SettingError``\s; those that were not a
-  ``ValueError`` change type: the ``keep_lines_containing`` / ``delete_lines_containing`` filters' wrong ``text`` or
-  ``re`` type (was ``TypeError``), the ``additions_only`` directive's wrong type (was ``TypeError``), the
-  ``telegram`` reporter's missing bot token (was ``RuntimeError``), and invalid regular expressions (was
-  ``re.error``), CSS selectors (was ``cssselect.SelectorError``) and ``jq`` queries; also, finding both a legacy
-  and a current ``job_defaults`` key in the configuration now raises a ``ValueError`` (was ``KeyError``).
+  ``httpx2`` and ``httpx`` are separate packages whose classes are unrelated, so mixing them breaks silently.
+* New ``webchanges.util.SettingError`` (a ``ValueError`` subclass): a custom filter, differ or reporter in ``hooks.py``
+  can raise it to report a wrong setting without a traceback (see above). The bundled ones now raise it for their
+  settings errors, so code catching ``TypeError``, ``RuntimeError``, ``re.error`` or ``cssselect.SelectorError`` from
+  them must catch ``ValueError`` (or ``SettingError``) instead.
+* Finding both a legacy and a current ``job_defaults`` key in the configuration (a duplicate) raises ``ValueError``
+  (was ``KeyError``).
 
 Internals
 `````````
-* Replaced the vendored ``httpx`` v0.28.1 ``Headers`` class (used as a fallback when neither ``httpx2`` nor ``httpx``
-  is installed) with ``httpx2`` v2.16.0's.
+* Replaced the vendored ``httpx`` v0.28.1 ``Headers`` class (used as a fallback) with ``httpx2`` v2.16.0's.
 
 
 Version 3.39.0
