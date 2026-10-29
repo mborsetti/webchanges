@@ -84,6 +84,11 @@ Fixed
 * The error for a configuration value of the wrong type ended with a stray closing parenthesis.
 * ``keep_lines_containing`` and ``delete_lines_containing`` filters: an invalid regular expression in ``re`` was
   reported as a confusing ``KeyError: 'pattern'`` instead of the regular expression's error.
+* ``html2text`` filter: a sub-directive that its method does not use, e.g. a misspelled one such as ``metod`` or
+  ``pad_table``, was silently ignored (the ``html2text`` package accepts any name as an option, and ignores those it
+  does not know); it now stops the job with an error naming it and suggesting the closest sub-directive (e.g. "did you
+  mean 'pad_tables'?"). The options accepted by the default method are those of the ``html2text`` package's parser,
+  as of its version 2025.4.15, and are listed in the documentation.
 
 Internals impacting hooks.py
 ````````````````````````````

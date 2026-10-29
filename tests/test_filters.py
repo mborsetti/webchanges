@@ -462,6 +462,73 @@ def test_filter_exceptions_jq(data: str, subfilter: dict[str, Any], expected: st
     assert e.value.args[0][: len(expected)] == expected
 
 
+def test_html2text_options_match_the_installed_package() -> None:
+    """HTML2TEXT_OPTIONS lists exactly the options of the installed html2text package.
+
+    They are the attributes assigned in the "# Config options" block of HTML2Text.__init__(), less the parser's table
+    state and tag_callback; if this fails after updating html2text, review the list in filters/_html.py.
+    """
+    import inspect
+
+    import html2text
+
+    from webchanges.filters._html import HTML2TEXT_OPTIONS
+
+    source = inspect.getsource(html2text.HTML2Text.__init__)
+    block = source.split('# Config options', 1)[1].split('if out is None', 1)[0]
+    assigned = {line.split('=', 1)[0].strip().removeprefix('self.') for line in block.splitlines() if '=' in line}
+    assert assigned - {'split_next_td', 'td_count', 'table_start', 'tag_callback'} == HTML2TEXT_OPTIONS
+    parser = html2text.HTML2Text()
+    assert all(hasattr(parser, option) for option in HTML2TEXT_OPTIONS)
+
+
+@pytest.mark.parametrize(
+    ('subfilter', 'expected'),
+    [
+        (
+            {'metod': 'strip_tags'},
+            (
+                "Filter html2text's method 'html2text' does not support the sub-directive(s) 'metod' (did you mean "
+                "'method'?); it supports backquote_code_style, "
+            ),
+        ),
+        (
+            {'pad_table': True},
+            (
+                "Filter html2text's method 'html2text' does not support the sub-directive(s) 'pad_table' (did you mean "
+                "'pad_tables'?)"
+            ),
+        ),
+        (
+            {'method': 'bs4', 'seperator': ' '},
+            (
+                "Filter html2text's method 'bs4' does not support the sub-directive(s) 'seperator' (did you mean "
+                "'separator'?); it supports method, parser, separator, strip. (Job 0: "
+            ),
+        ),
+        (
+            {'method': 'strip_tags', 'pad_tables': True},
+            (
+                "Filter html2text's method 'strip_tags' does not support the sub-directive(s) 'pad_tables'; it "
+                'supports none other than method. (Job 0: '
+            ),
+        ),
+    ],
+    ids=['typo-of-method', 'typo-of-option', 'bs4-typo', 'strip_tags-option'],
+)
+def test_html2text_rejects_unknown_sub_directives(subfilter: dict[str, Any], expected: str) -> None:
+    """A sub-directive that the method does not use (e.g. a typo) is a SettingError, not silently ignored."""
+    with pytest.raises(SettingError) as e:
+        Html2TextFilter(job_state).filter('<div>a</div>', 'text/html', subfilter)
+    assert str(e.value).startswith(expected)
+
+
+def test_html2text_option_names_are_case_insensitive() -> None:
+    """Options are matched case-insensitively, as they are lowercased when set on the parser."""
+    data, _ = Html2TextFilter(job_state).filter('<em>a</em>', 'text/html', {'Ignore_Emphasis': True})
+    assert data == 'a'
+
+
 def test_html2text_decodes_json_encoded_string() -> None:
     r"""A JSON document that is a bare string is decoded (unescaping the \uXXXX) before being converted."""
     json_encoded = json.dumps('<div>café — café</div>')  # i.e. '"<div>caf\\u00e9 \\u2014 caf\\u00e9</div>"'
