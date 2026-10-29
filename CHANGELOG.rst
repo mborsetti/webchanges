@@ -61,6 +61,11 @@ Changed
 * An error in the configuration or jobs file found when starting (e.g. a YAML syntax error, an unrecognized directive
   or a value of the wrong type) is now shown as its message only, and :program:`webchanges` exits with code 1; it was
   preceded by a Python traceback that buried it. Run with ``-v`` to also show the traceback.
+* A wrong setting of a filter, differ or reporter is now also shown as its message only, without a Python
+  traceback: for a filter or differ in the job's report (e.g. "Unknown method bogus for filter 'html2text'. (Job 1:
+  ...)"), and for a reporter, or an unknown ``differ`` name, as the message on exit with code 1 (these stop the run,
+  as the reports cannot be sent). Invalid regular expressions, CSS selectors, XPath expressions and ``jq`` queries
+  are reported the same way, naming the filter and the expression.
 * ``ai_google`` differ: when an HTTP 429 or 503 error is not retried automatically, the error summary now states the
   specific reason (no usable retry delay in the response, or the requested delay exceeding the limit) instead of
   listing both; the total wait after retries is shown without a trailing ``.0``.
@@ -77,6 +82,8 @@ Fixed
   ``wait_for_url`` was a dict (of Playwright options) instead of a string, and an invalid ``wait_for_url`` raised an
   ``AttributeError`` instead of the intended error message.
 * The error for a configuration value of the wrong type ended with a stray closing parenthesis.
+* ``keep_lines_containing`` and ``delete_lines_containing`` filters: an invalid regular expression in ``re`` was
+  reported as a confusing ``KeyError: 'pattern'`` instead of the regular expression's error.
 
 Internals impacting hooks.py
 ````````````````````````````
@@ -87,6 +94,14 @@ Internals impacting hooks.py
   other ``httpx`` exception) no longer catches the errors raised by ``url`` jobs, which now come from ``httpx2``.
   Also, ``UrlJob._retrieve_httpx()`` is renamed ``UrlJob._retrieve_httpx2()``, and ``JobState._http_client_used``
   records ``httpx2`` instead of ``httpx``.
+* New ``webchanges.util.SettingError`` (a subclass of ``ValueError``) for a wrong setting the user made: its message
+  is shown without a traceback (see above), so a custom filter, differ or reporter in ``hooks.py`` can raise it too.
+  The settings errors of the bundled filters, differs and reporters are now ``SettingError``\s; those that were not a
+  ``ValueError`` change type: the ``keep_lines_containing`` / ``delete_lines_containing`` filters' wrong ``text`` or
+  ``re`` type (was ``TypeError``), the ``additions_only`` directive's wrong type (was ``TypeError``), the
+  ``telegram`` reporter's missing bot token (was ``RuntimeError``), and invalid regular expressions (was
+  ``re.error``), CSS selectors (was ``cssselect.SelectorError``) and ``jq`` queries; also, finding both a legacy
+  and a current ``job_defaults`` key in the configuration now raises a ``ValueError`` (was ``KeyError``).
 
 Internals
 `````````

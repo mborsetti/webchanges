@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from webchanges import __project_name__
 from webchanges.reporters._base import TextReporter
+from webchanges.util import SettingError
 
 if TYPE_CHECKING:
     from webchanges.handler import JobState
@@ -34,7 +35,7 @@ class RunCommandReporter(TextReporter):
 
     def submit(self) -> None:  # ty:ignore[invalid-method-override]
         if not self.config['command']:
-            raise ValueError('Reporter "run_command" needs a command')
+            raise SettingError('Reporter "run_command" needs a command')
 
         text = '\n'.join(super().submit())
 
@@ -105,7 +106,7 @@ class ShellReporter(RunCommandReporter):
         """
         command = self.config['command']
         if not command:
-            raise ValueError('Reporter "shell" needs a command')
+            raise SettingError('Reporter "shell" needs a command')
 
         text = '\n'.join(TextReporter.submit(self))
         if not text:

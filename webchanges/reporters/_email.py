@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from webchanges.mailer import Mailer, SendmailMailer, SMTPMailer
 from webchanges.reporters._base import HtmlReporter, TextReporter
+from webchanges.util import SettingError
 
 if TYPE_CHECKING:
     from webchanges.storage import _ConfigReportEmail, _ConfigReportMailgun
@@ -50,7 +51,7 @@ class EMailReporter(TextReporter):
         elif self.config['method'] == 'sendmail':
             mailer = SendmailMailer(self.config['sendmail']['path'])
         else:
-            raise ValueError(f'Unknown email reporter method: {self.config["method"]}')
+            raise SettingError(f'Unknown email reporter method: {self.config["method"]}')
 
         reply_to = self.config.get('reply_to')
         if self.config['html']:

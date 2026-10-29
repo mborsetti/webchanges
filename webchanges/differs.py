@@ -55,7 +55,7 @@ import html2text
 import yaml
 
 from webchanges._httpx import h2, httpx2
-from webchanges.util import TrackSubClasses, linkify, mark_to_html, missing_dependency
+from webchanges.util import SettingError, TrackSubClasses, linkify, mark_to_html, missing_dependency
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -278,12 +278,12 @@ def _resolve_additions_only(value: bool | float | str | None) -> tuple[bool, flo
     if isinstance(value, str):
         if value == _ADDITIONS_ONLY_DISABLE_SAFEGUARD:
             return True, None
-        raise ValueError(f'additions_only string value must be {_ADDITIONS_ONLY_DISABLE_SAFEGUARD!r}; got {value!r}')
+        raise SettingError(f'additions_only string value must be {_ADDITIONS_ONLY_DISABLE_SAFEGUARD!r}; got {value!r}')
     if isinstance(value, (int, float)):
         if not 0 <= value <= 1:
-            raise ValueError(f'additions_only numeric value must be in [0, 1]; got {value!r}')
+            raise SettingError(f'additions_only numeric value must be in [0, 1]; got {value!r}')
         return True, float(value)
-    raise TypeError(
+    raise SettingError(
         f'additions_only must be a boolean, a number in [0, 1], or '
         f'{_ADDITIONS_ONLY_DISABLE_SAFEGUARD!r}; got {type(value).__name__}'
     )
@@ -396,13 +396,13 @@ class DifferBase(metaclass=TrackSubClasses):
             if list(directives.keys()) == ['command']:
                 differ_kind = 'command'
             else:
-                raise ValueError(
+                raise SettingError(
                     f"Job {job_index_number}: Differ directive must have a 'name' sub-directive: {differ_spec}."
                 )
 
         differcls: DifferBase | None = cls.__subclasses__.get(differ_kind, None)  # ty:ignore[invalid-assignment]
         if not differcls:
-            raise ValueError(f'Job {job_index_number}: No differ named {differ_kind}.')
+            raise SettingError(f'Job {job_index_number}: No differ named {differ_kind}.')
 
         directives = directives_with_defaults(differ_kind, directives, differ_defaults)
 
@@ -411,7 +411,7 @@ class DifferBase(metaclass=TrackSubClasses):
             allowed_keys = set(differcls.__supported_directives__.keys())
             unknown_keys = provided_keys.difference(allowed_keys)
             if unknown_keys and '<any>' not in allowed_keys:
-                raise ValueError(
+                raise SettingError(
                     f'Job {job_index_number}: Differ {differ_kind} does not support sub-directive(s) '
                     f'{", ".join(unknown_keys)} (supported: {", ".join(sorted(allowed_keys))}).'
                 )

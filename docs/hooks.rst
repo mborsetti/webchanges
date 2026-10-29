@@ -56,6 +56,7 @@ Example ``hooks.py`` file:
    from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
    from webchanges.jobs import BrowserJob, JobBase, TransientBrowserError, UrlJob, UrlJobBase
    from webchanges.reporters import HtmlReporter, TextReporter
+   from webchanges.util import SettingError
 
    if TYPE_CHECKING:
        from playwright.sync_api import Page, Response
@@ -179,7 +180,8 @@ Example ``hooks.py`` file:
            elif subfilter.get("lower"):
                return data.lower(), mime_type
            else:
-               raise ValueError(f"Unknown case subfilter {subfilter}")
+               # A SettingError is shown in the report as its message only, without a traceback
+               raise SettingError(f"Unknown case subfilter {subfilter}")
 
 
    class IndentFilter(FilterBase):

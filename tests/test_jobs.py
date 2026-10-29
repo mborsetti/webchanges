@@ -53,6 +53,7 @@ from webchanges.jobs._url import (
 )
 from webchanges.main import Urlwatch
 from webchanges.storage import SsdbSQLite3Storage, YamlConfigStorage, YamlJobsStorage, _Config
+from webchanges.util import SettingError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -1274,19 +1275,20 @@ def test_invalid_directive() -> None:
     ids=['url', 'browser', 'command', 'base'],
 )
 def test_format_error_transient_http_error_has_no_traceback(job_data: dict[str, Any] | None) -> None:
-    """Reports show a TransientHTTPError's message rather than a full Python traceback.
+    """Reports show a TransientHTTPError's or a SettingError's message rather than a full Python traceback.
 
-    It describes a condition of the monitored resource, not a webchanges failure.
+    They describe a condition of the monitored resource or a wrong setting in the job, not a webchanges failure.
     """
     job = JobBase.unserialize(job_data) if job_data else Job()
 
     for exception in (
         TransientHTTPError('503 Server Error: Service Unavailable for url: https://www.example.com/', status_code=503),
         TransientHTTPError('No data received and empty_as_error is set', status_code=999),
+        SettingError("Unknown method bogus for filter 'html2text'. (Job 1: https://www.example.com/)"),
     ):
         try:
             raise exception
-        except TransientHTTPError as e:
+        except (TransientHTTPError, SettingError) as e:
             formatted = job.format_error(e, traceback.format_exc())
         assert formatted == str(exception)
         assert 'Traceback (most recent call last)' not in formatted

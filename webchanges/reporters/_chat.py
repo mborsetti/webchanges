@@ -18,7 +18,7 @@ from markdown2 import Markdown
 
 from webchanges.mailer import import_keyring
 from webchanges.reporters._base import MarkdownReporter, TextReporter, chunk_string
-from webchanges.util import missing_dependency
+from webchanges.util import SettingError, missing_dependency
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -53,7 +53,7 @@ class TelegramReporter(MarkdownReporter):
         """Submit report."""
         bot_token = self.config['bot_token'] or os.environ.get('TELEGRAM_BOT_TOKEN')
         if bot_token is None:
-            raise RuntimeError('Telegram bot token not found')
+            raise SettingError('Telegram bot token not found')
         chat_ids = self.config['chat_id']
         chat_ids_list = [chat_ids] if not isinstance(chat_ids, list) else chat_ids
 
@@ -304,7 +304,7 @@ class XMPP:
         keyring = import_keyring(used_by="the 'xmpp' reporter's password (as no 'insecure_password' is set)")
         password = keyring.get_password('urlwatch_xmpp', self.sender)
         if password is None:
-            raise ValueError(f'No password available in keyring for {self.sender}')
+            raise SettingError(f'No password available in keyring for {self.sender}')
         return password
 
     async def send(self, chunks: Iterable[str]) -> None:

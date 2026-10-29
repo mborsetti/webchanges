@@ -23,7 +23,7 @@ from webchanges import __user_agent__
 from webchanges._httpx import Headers, httpx2
 from webchanges.filters._base import FiltersList  # noqa: TC001 (required for type check)
 from webchanges.jobs._exceptions import TransientHTTPError
-from webchanges.util import TrackSubClasses
+from webchanges.util import SettingError, TrackSubClasses
 
 if httpx2 is None:  # pragma: no cover
     print("Required package 'httpx2' (or 'httpx') not found; will attempt to run using 'requests'")
@@ -667,10 +667,10 @@ class JobBase(metaclass=TrackSubClasses):
         :param tb: The traceback.format_exc() string.
         :returns: A string to display and/or use in reports.
         """
-        if isinstance(exception, TransientHTTPError):
+        if isinstance(exception, (TransientHTTPError, SettingError)):
             # Instead of a full traceback, just show the error: it describes a condition of the monitored resource
-            # (e.g. an HTTP 503 response, or no data received) and not a failure of webchanges, so a stack trace
-            # would only be alarming noise.
+            # (e.g. an HTTP 503 response, or no data received) or a wrong setting in the job, and not a failure of
+            # webchanges, so a stack trace would only be alarming noise.
             return str(exception).strip()
         return tb
 

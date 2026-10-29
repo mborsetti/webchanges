@@ -16,7 +16,7 @@ from xml.parsers.expat import ExpatError
 import yaml
 
 from webchanges.filters._base import FilterBase
-from webchanges.util import missing_dependency
+from webchanges.util import SettingError, missing_dependency
 
 # Optional dependencies (pypdf, pdftotext, Pillow, pytesseract, vobject, jq) are imported inside the filters that use
 # them, so that only the runs that need them pay for importing them (see missing_dependency() in webchanges/util.py).
@@ -90,7 +90,7 @@ class PypdfFilter(FilterBase):
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         # data must be bytes
         if not isinstance(data, bytes):
-            raise ValueError(
+            raise SettingError(
                 f"The '{self.__kind__}' filter needs bytes input (is it the first filter?). "
                 f'({self.job.get_indexed_location()})'
             )
@@ -155,7 +155,7 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         # data must be bytes
         if not isinstance(data, bytes):
-            raise ValueError(
+            raise SettingError(
                 f"The '{self.__kind__}' filter needs bytes input (is it the first filter?). "
                 f'({self.job.get_indexed_location()})'
             )
@@ -229,7 +229,7 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
 
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         if not isinstance(data, bytes):
-            raise ValueError(
+            raise SettingError(
                 f"The '{self.__kind__}' filter needs bytes input (is it the first filter?). "
                 f'({self.job.get_indexed_location()})'
             )
@@ -268,7 +268,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
 
     def filter(self, data: str | bytes, mime_type: str, subfilter: dict[str, Any]) -> tuple[str | bytes, str]:
         if 'query' not in subfilter:
-            raise ValueError(f"The 'jq' filter needs a query. ({self.job.get_indexed_location()})")
+            raise SettingError(f"The 'jq' filter needs a query. ({self.job.get_indexed_location()})")
         try:
             jsondata = json.loads(data)
         except ValueError:
@@ -279,6 +279,10 @@ class JQFilter(FilterBase):  # pragma: has-jq
         except ImportError as e:  # pragma: has-jq
             self.raise_import_error('jq', self.__kind__, e, extra='jq')
 
+        try:
+            jq.compile(subfilter['query'])  # to tell an invalid query apart from an error running it on the data
+        except ValueError as e:
+            raise SettingError(f"The 'jq' filter's query is invalid: {e} ({self.job.get_indexed_location()})") from None
         return jq.text(subfilter['query'], jsondata), 'text/plain'
         # Unicode solution is below https://github.com/mwilliamson/jq.py/issues/59
         # however it aborts execution(!) during testing

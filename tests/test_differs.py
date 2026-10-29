@@ -38,6 +38,7 @@ from webchanges.differs import (
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase, ShellJob
 from webchanges.storage import SsdbSQLite3Storage
+from webchanges.util import SettingError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -158,13 +159,13 @@ def job_state() -> Generator[JobState, None, None]:
 
 
 def test_invalid_differ_name_raises_valueerror() -> None:
-    with pytest.raises(ValueError) as pytest_wrapped_e:
+    with pytest.raises(SettingError) as pytest_wrapped_e:
         list(DifferBase.normalize_differ({'name': 'adiffernamethatdoesnotexist'}))
     assert str(pytest_wrapped_e.value) == 'Job None: No differ named adiffernamethatdoesnotexist.'
 
 
 def test_providing_subdirective_to_differ_without_differ_raises_valueerror() -> None:
-    with pytest.raises(ValueError) as pytest_wrapped_e:
+    with pytest.raises(SettingError) as pytest_wrapped_e:
         list(DifferBase.normalize_differ({'name': 'deepdiff', 'asubdifferthatdoesnotexist': True}))
     err_msg = str(pytest_wrapped_e.value)
     assert err_msg == (
@@ -174,8 +175,23 @@ def test_providing_subdirective_to_differ_without_differ_raises_valueerror() -> 
     )
 
 
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        ('bogus', "additions_only string value must be 'disable_safeguard'; got 'bogus'"),
+        (2, 'additions_only numeric value must be in [0, 1]; got 2'),
+        ([], "additions_only must be a boolean, a number in [0, 1], or 'disable_safeguard'; got list"),
+    ],
+)
+def test_additions_only_wrong_value_is_a_setting_error(value: object, expected: str) -> None:
+    """A wrong additions_only raises a SettingError, so that the report shows its message without a traceback."""
+    with pytest.raises(SettingError) as pytest_wrapped_e:
+        differs._resolve_additions_only(value)  # ty:ignore[invalid-argument-type]
+    assert str(pytest_wrapped_e.value) == expected
+
+
 def test_providing_unknown_subdirective_raises_valueerror() -> None:
-    with pytest.raises(ValueError) as pytest_wrapped_e:
+    with pytest.raises(SettingError) as pytest_wrapped_e:
         list(DifferBase.normalize_differ({'name': 'image', 'data_type': 'json', 'anothersubdirective': '42'}))
     err_msg = str(pytest_wrapped_e.value)
     assert err_msg == (

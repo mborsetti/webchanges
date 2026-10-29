@@ -34,6 +34,7 @@ from webchanges.cli import (
     teardown_logger,
 )
 from webchanges.config import CommandConfig
+from webchanges.util import SettingError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -872,6 +873,10 @@ def test_exit_on_user_error_shows_only_the_message(capsys: pytest.CaptureFixture
         yaml.safe_load('a: [unclosed')
     assert capsys.readouterr().err.startswith('while parsing a flow sequence')
 
+    with pytest.raises(SystemExit), exit_on_user_error(None, (SettingError,)):
+        raise SettingError('Reporter "run_command" needs a command')
+    assert capsys.readouterr().err.startswith('Reporter "run_command" needs a command\n')
+
 
 def test_exit_on_user_error_verbose_or_other_errors_propagate() -> None:
     """With -v the error keeps its traceback; exceptions other than the ones given are never caught."""
@@ -879,6 +884,8 @@ def test_exit_on_user_error_verbose_or_other_errors_propagate() -> None:
         raise ValueError('bad value')
     with pytest.raises(KeyError), exit_on_user_error(None, (ValueError,)):
         raise KeyError('a bug')
+    with pytest.raises(ValueError, match='a bug'), exit_on_user_error(None, (SettingError,)):
+        raise ValueError('a bug')
 
 
 def test_update_schema_hashes_script(tmp_path: Path) -> None:

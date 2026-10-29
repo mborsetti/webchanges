@@ -29,6 +29,7 @@ from webchanges.jobs import JobBase
 from webchanges.mailer import SMTP_TIMEOUT, SMTPMailer, smtp_have_password, smtp_set_password
 from webchanges.reporters import ReporterBase, TelegramReporter
 from webchanges.storage import DEFAULT_CONFIG
+from webchanges.util import SettingError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -199,10 +200,13 @@ def test_reporters(reporter: str, capsys: pytest.CaptureFixture) -> None:
                         )
                     ]
                 )
-        case 'ifttt' | 'mailgun' | 'prowl' | 'pushover' | 'telegram':
+        case 'ifttt' | 'mailgun' | 'prowl' | 'pushover':
             with pytest.raises(RuntimeError) as pytest_wrapped_e:
                 test_report.finish_one(reporter, check_enabled=False)
             assert reporter in str(pytest_wrapped_e.value).lower()
+        case 'telegram':
+            with pytest.raises(SettingError, match='Telegram bot token not found'):
+                test_report.finish_one(reporter, check_enabled=False)
         case 'pushbullet':
             if not pushbullet_broken:
                 with pytest.raises(RuntimeError) as pytest_wrapped_e:

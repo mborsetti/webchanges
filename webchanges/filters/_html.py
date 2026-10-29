@@ -31,11 +31,12 @@ from urllib.parse import urljoin
 from xml.dom import minidom
 
 import html2text
+from cssselect import SelectorError
 from lxml import etree
 from lxml.cssselect import CSSSelector
 
 from webchanges.filters._base import AutoMatchFilter, FilterBase, RegexMatchFilter
-from webchanges.util import missing_dependency
+from webchanges.util import SettingError, missing_dependency
 
 if TYPE_CHECKING:
     from webchanges.jobs import JobBase
@@ -278,7 +279,7 @@ class Html2TextFilter(FilterBase):
             try:
                 soup = bs4.BeautifulSoup(data, features=bs4_parser)
             except bs4.FeatureNotFound:
-                raise ValueError(  # noqa: B904
+                raise SettingError(  # noqa: B904
                     f"Filter html2text's method 'bs4' has been invoked with parser '{bs4_parser}', which is either not "
                     f'installed or is not supported by Beautiful Soup. Please refer to the documentation at '
                     f'https://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser. '
@@ -299,7 +300,7 @@ class Html2TextFilter(FilterBase):
             stripped_tags = html.unescape(re.sub(r'<[^>]*>', '', data))
             return '\n'.join(line.rstrip() for line in stripped_tags.splitlines() if line.strip() != ''), 'text/plain'
 
-        raise ValueError(f"Unknown method {method} for filter 'html2text'. ({self.job.get_indexed_location()})")
+        raise SettingError(f"Unknown method {method} for filter 'html2text'. ({self.job.get_indexed_location()})")
 
 
 class FormatXMLFilter(FilterBase):
@@ -405,7 +406,7 @@ class ElementByIdFilter(FilterBase):
         if not isinstance(data, str):
             raise ValueError
         if 'id' not in subfilter:
-            raise ValueError(
+            raise SettingError(
                 f"The 'element-by-id' filter needs an id for filtering. ({self.job.get_indexed_location()})"
             )
 
@@ -429,7 +430,7 @@ class ElementByClassFilter(FilterBase):
         if not isinstance(data, str):
             raise ValueError
         if 'class' not in subfilter:
-            raise ValueError(
+            raise SettingError(
                 f"The 'element-by-class' filter needs a class for filtering. ({self.job.get_indexed_location()})"
             )
 
@@ -453,7 +454,7 @@ class ElementByStyleFilter(FilterBase):
         if not isinstance(data, str):
             raise ValueError
         if 'style' not in subfilter:
-            raise ValueError(
+            raise SettingError(
                 f"The 'element-by-style' filter needs a style for filtering. ({self.job.get_indexed_location()})"
             )
 
@@ -477,7 +478,7 @@ class ElementByTagFilter(FilterBase):
         if not isinstance(data, str):
             raise ValueError
         if 'tag' not in subfilter:
-            raise ValueError(
+            raise SettingError(
                 f"The 'element-by-tag' filter needs a tag for filtering. ({self.job.get_indexed_location()})"
             )
 
@@ -512,12 +513,12 @@ class LxmlParser:
         self.filter_kind = filter_kind
         self.method = subfilter.get('method', 'html')
         if self.method not in {'html', 'xml'}:
-            raise ValueError(
+            raise SettingError(
                 f"The '{filter_kind}' filter's method must be 'html' or 'xml', got '{self.method}'. "
                 f'({job.get_indexed_location()})'
             )
         if expr_key not in subfilter and 'exclude' not in subfilter:
-            raise ValueError(
+            raise SettingError(
                 f"The '{filter_kind}' filter needs {self.EXPR_NAMES[filter_kind]} for filtering. "
                 f'({job.get_indexed_location()})'
             )
@@ -529,7 +530,7 @@ class LxmlParser:
         self.sort_items = bool(subfilter.get('sort', False))
         self.maxitems = int(subfilter.get('maxitems', 0))
         if self.method == 'html' and self.namespaces:
-            raise ValueError(
+            raise SettingError(
                 f"The '{filter_kind}' filter's namespace prefixes are only supported with 'method: xml'. "
                 f'({job.get_indexed_location()})'
             )
@@ -636,8 +637,12 @@ class LxmlParser:
             elif self.filter_kind == 'xpath':
                 selected_elems = root.xpath(self.expression, namespaces=self.namespaces)  # ty:ignore[invalid-assignment]
                 excluded_elems = root.xpath(self.exclude, namespaces=self.namespaces) if self.exclude else None  # ty:ignore[invalid-assignment]
-        except (etree.ParserError, etree.XMLSchemaError, etree.XPathError) as e:
-            raise ValueError(f'Job {job_index_number} {type(e).__name__}: {e} {self.expression}') from e
+        except (etree.ParserError, etree.XMLSchemaError, etree.XPathError, SelectorError) as e:
+            expressions = f'"{self.expression}"' + (f' or exclude "{self.exclude}"' if self.exclude else '')
+            raise SettingError(
+                f"Job {job_index_number}: The '{self.filter_kind}' filter's expression {expressions} is invalid: "
+                f'{type(e).__name__}: {e}'
+            ) from None
         if excluded_elems is not None:
             for el in excluded_elems:
                 self._remove_element(el)

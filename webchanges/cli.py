@@ -25,7 +25,13 @@ import platformdirs
 
 from webchanges import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
 from webchanges.config import CommandConfig
-from webchanges.util import edit_file, file_ownership_checks, get_new_version_number, import_module_from_source
+from webchanges.util import (
+    SettingError,
+    edit_file,
+    file_ownership_checks,
+    get_new_version_number,
+    import_module_from_source,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -958,8 +964,8 @@ def exit_on_user_error(verbose: int | None, errors: tuple[type[Exception], ...])
     """Exits with 1 showing only the message if one of ``errors``, an error the user is to fix, is raised.
 
     Such errors (e.g. a YAML syntax error, an unknown directive or a value of the wrong type in the configuration or
-    jobs file) have a message naming the problem, which a traceback would only bury; with -v the exception propagates
-    with its traceback.
+    jobs file, or a reporter's wrong setting) have a message naming the problem, which a traceback would only bury;
+    with -v the exception propagates with its traceback.
 
     :param verbose: The verbosity level (-v) of the run.
     :param errors: The exception types that are the user's errors.
@@ -1069,7 +1075,7 @@ def _main() -> None:  # pragma: no cover
         YamlJobsStorage,
     )
 
-    # The errors in the configuration and jobs files found when loading them
+    # The errors in the configuration and jobs files found when loading them (a SettingError is a ValueError)
     file_errors = (ValueError, yaml.YAMLError)
 
     # Locate config, jobs, hooks and database files
@@ -1132,8 +1138,10 @@ def _main() -> None:  # pragma: no cover
         urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)  # command.py
 
-    # Run 'webchanges', starting with processing command line arguments
-    urlwatch_command.run()
+    # Run 'webchanges', starting with processing command line arguments; a SettingError raised while reporting (e.g. a
+    # reporter's or a job's differ's wrong setting) stops the run, as the reports cannot be sent
+    with exit_on_user_error(command_config.verbose, (SettingError,)):
+        urlwatch_command.run()
 
     # Remove Playwright debug mode if there
     teardown_logger(command_config.verbose)

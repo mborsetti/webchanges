@@ -49,6 +49,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class SettingError(ValueError):
+    """Raised for a setting the user made that is wrong, e.g. a filter's, differ's or reporter's sub-directive.
+
+    Its message names the setting and what is wrong with it, which is all the user needs to fix it, so it is shown
+    without a traceback: in the report for a job's filters and differs (JobBase.format_error), and on exit for the
+    errors that stop the run (cli.exit_on_user_error), unless running with -v.
+    """
+
+
 def _parse_version(value: str):  # noqa: ANN202 returns packaging.version.Version (lazy import)
     """Lazily import packaging's ``parse`` (with vendored fallback) and return the parsed Version."""
     try:
