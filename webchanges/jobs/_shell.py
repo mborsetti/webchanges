@@ -216,7 +216,7 @@ class ShellJob(Job):
            a child process.
         """
         logger.info('Job %s: Running shell command: %s', self.index_number, self.command)
-        needs_bytes = FilterBase.filter_chain_needs_bytes(self.filters)  # ty:ignore[invalid-argument-type]
+        needs_bytes = FilterBase.filter_chain_needs_bytes(self.filters)
 
         # The stderr directive: 'ignore' (the default) reports stderr only with a non-zero exit code, 'forward' also
         # writes it to webchanges' stderr, 'fail' fails the job on any stderr output, and 'stdout' merges it into

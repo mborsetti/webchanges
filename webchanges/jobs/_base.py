@@ -771,12 +771,6 @@ class Job(JobBase):
         'user_visible_url',
     )
 
-    def get_location(self) -> str:  # ty:ignore[empty-body]
-        """Get the 'location' of the job, i.e. the (user_visible) URL or command.
-
-        :returns: The user_visible_url, the URL, or the command of the job.
-        """
-
     def get_indexed_location(self) -> str:
         """Get the job number plus its 'location', i.e. the (user_visible) URL or command.
 

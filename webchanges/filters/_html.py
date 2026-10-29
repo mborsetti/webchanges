@@ -588,13 +588,15 @@ class LxmlParser:
     def _orphaned(self, element: etree._Element) -> bool:
         if isinstance(element, etree._ElementUnicodeResult):
             parent = element.getparent()
+            if parent is None:  # a string with no element behind it (kept as is by _reevaluate)
+                return False
             if (
-                (element.is_tail and parent.tail is None)  # ty:ignore[unresolved-attribute]
-                or (element.is_text and parent.text is None)  # ty:ignore[unresolved-attribute]
-                or (element.is_attribute and parent.attrib.get(element.attrname) is None)  # ty:ignore[unresolved-attribute]
+                (element.is_tail and parent.tail is None)
+                or (element.is_text and parent.text is None)
+                or (element.is_attribute and parent.attrib.get(element.attrname) is None)
             ):
                 return True
-            element = parent  # ty:ignore[invalid-assignment]
+            element = parent
         try:
             tree = element.getroottree()
             path = tree.getpath(element)

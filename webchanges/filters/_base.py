@@ -230,7 +230,7 @@ class FilterBase(metaclass=TrackSubClasses):
         return data, mime_type
 
     @classmethod
-    def filter_chain_needs_bytes(cls, filter_name: str | list[str | dict[str, Any]] | None) -> bool:
+    def filter_chain_needs_bytes(cls, filter_name: str | Iterable[str | dict[str, Any]] | None) -> bool:
         """Checks whether the first filter requires data in bytes (not Unicode).
 
         :param filter_name: The filter.

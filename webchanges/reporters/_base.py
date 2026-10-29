@@ -554,6 +554,10 @@ class TextReporter(ReporterBase):
 
     __kind__ = 'text'
 
+    def _red(self, s: str) -> str:
+        """Returns the text to be shown in red: unchanged here; StdoutReporter colors it."""
+        return s
+
     def submit(self, **kwargs: Any) -> Iterable[str]:
         """Submit a job to generate the report.
 
@@ -641,7 +645,7 @@ class TextReporter(ReporterBase):
         :returns: HTML for a single job.
         """
         if job_state.verb == 'error' or job_state.verb == 'error,repeated':
-            text = self._red(job_state.traceback) if hasattr(self, '_red') else job_state.traceback  # ty:ignore[call-non-callable]
+            text = self._red(job_state.traceback)
             if job_state.job.suppress_repeated_errors:
                 text += 'Reminder: No further alerts until the error is resolved or changes.'
             return text
