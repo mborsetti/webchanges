@@ -741,9 +741,19 @@ Example configuration:
 
 Optional sub-directives
 ~~~~~~~~~~~~~~~~~~~~~~~
-* See the optional sub-directives in the html2text Python package's `documentation
-  <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__. The following options are set
-  by :program:`webchanges` but can be overridden:
+* Any option of the html2text Python package's parser (see their description in the package's `documentation
+  <https://github.com/Alir3z4/html2text/blob/master/docs/usage.md#available-options>`__): ``backquote_code_style``,
+  ``body_width``, ``bypass_tables``, ``close_quote``, ``default_image_alt``, ``emphasis_mark``, ``escape_snob``,
+  ``google_doc``, ``google_list_indent``, ``hide_strikethrough``, ``ignore_emphasis``, ``ignore_images``,
+  ``ignore_links``, ``ignore_mailto_links``, ``ignore_tables``, ``images_as_html``, ``images_to_alt``,
+  ``images_with_size``, ``include_sup_sub``, ``inline_links``, ``links_each_paragraph``, ``mark_code``,
+  ``open_quote``, ``pad_tables``, ``protect_links``, ``single_line_break``, ``skip_internal_links``, ``strong_mark``,
+  ``ul_item_mark``, ``unicode_snob``, ``use_automatic_links``, ``wrap_links``, ``wrap_list_items`` and
+  ``wrap_tables``. Any other sub-directive (e.g. a misspelled one) stops the job with an error, as the package would
+  silently ignore it. This list is the one of html2text 2025.4.15, taken from its `source code
+  <https://github.com/Alir3z4/html2text/blob/2025.4.15/html2text/__init__.py>`__ (the package's documentation omits
+  some options, such as ``pad_tables`` and ``ignore_mailto_links``). The following options are set by
+  :program:`webchanges` but can be overridden:
 
   * ``unicode_snob: true`` to ensure that accented characters are kept as they are;
   * ``body_width: 0`` to ensure that lines aren't chopped up;
@@ -764,6 +774,8 @@ but may not yield the prettiest of results.
     filters:
       - html2text: strip_tags
 
+This method takes no other sub-directive than ``method``; any other stops the job with an error.
+
 
 ``bs4``
 :::::::
@@ -779,6 +791,9 @@ This filter method extracts visible text from HTML using the `Beautiful Soup
       - html2text:
           method: bs4
           strip: true
+
+Besides ``method``, this method takes the sub-directives ``parser`` (see below), ``separator`` and ``strip``; any
+other stops the job with an error.
 
 Parsers
 ~~~~~~~

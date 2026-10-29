@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 __lazy_modules__ = [
+    'difflib',
     'html',
     'html2text',
     'importlib.util',
@@ -17,6 +18,7 @@ __lazy_modules__ = [
     'xml.dom',
 ]
 
+import difflib
 import html
 import importlib.util
 import json
@@ -39,6 +41,8 @@ from webchanges.filters._base import AutoMatchFilter, FilterBase, RegexMatchFilt
 from webchanges.util import SettingError, missing_dependency
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from webchanges.jobs import JobBase
 
 # Optional dependencies (beautifulsoup4, jsbeautifier, cssbeautifier) are imported inside the filters that use them, so
@@ -140,6 +144,53 @@ class AbsoluteLinksFilter(FilterBase):
         for elem in tree.xpath('//*[@src]'):  # ty:ignore[invalid-assignment, not-iterable]
             elem.attrib['src'] = urljoin(self.job.url, elem.attrib['src'])
         return etree.tostring(tree, encoding='unicode', method='html'), mime_type
+
+
+# The options of the html2text package's parser that the html2text filter (method html2text) accepts as
+# sub-directives. The package has neither a list of them nor any validation (an unknown name, e.g. a typo, would be set
+# as an attribute that nothing reads), and its docs/usage.md "Available options" is incomplete and partly wrong, so this
+# list is taken from the source: the attributes assigned in the "# Config options" block of HTML2Text.__init__() in
+# html2text 2025.4.15 (https://github.com/Alir3z4/html2text/blob/2025.4.15/html2text/__init__.py), less the parser's
+# table state kept there (split_next_td, td_count, table_start) and tag_callback (a function, which YAML cannot give).
+# Review it when updating html2text: tests/test_filters.py checks it against the installed package.
+HTML2TEXT_OPTIONS = frozenset(
+    {
+        'backquote_code_style',
+        'body_width',
+        'bypass_tables',
+        'close_quote',
+        'default_image_alt',
+        'emphasis_mark',
+        'escape_snob',
+        'google_doc',
+        'google_list_indent',
+        'hide_strikethrough',
+        'ignore_emphasis',
+        'ignore_images',
+        'ignore_links',
+        'ignore_mailto_links',
+        'ignore_tables',
+        'images_as_html',
+        'images_to_alt',
+        'images_with_size',
+        'include_sup_sub',
+        'inline_links',
+        'links_each_paragraph',
+        'mark_code',
+        'open_quote',
+        'pad_tables',
+        'protect_links',
+        'single_line_break',
+        'skip_internal_links',
+        'strong_mark',
+        'ul_item_mark',
+        'unicode_snob',
+        'use_automatic_links',
+        'wrap_links',
+        'wrap_list_items',
+        'wrap_tables',
+    }
+)
 
 
 class Html2TextFilter(FilterBase):
@@ -260,6 +311,7 @@ class Html2TextFilter(FilterBase):
             parser.wrap_links = False
             if hasattr(self.job, 'url'):
                 parser.baseurl = self.job.url
+            self._reject_unknown_options(method, options, HTML2TEXT_OPTIONS)
             for k, v in options.items():
                 setattr(parser, k.lower(), v)
                 if k == 'pad_tables':
@@ -269,6 +321,7 @@ class Html2TextFilter(FilterBase):
             return '\n'.join(line.rstrip() for line in parser.handle(data).splitlines()), 'text/markdown'
 
         if method == 'bs4':
+            self._reject_unknown_options(method, options, {'parser', 'separator', 'strip'})
             try:
                 import bs4
             except ImportError as e:  # pragma: has-bs4
@@ -290,6 +343,7 @@ class Html2TextFilter(FilterBase):
             return soup.get_text(separator=separator, strip=strip), 'text/plain'
 
         if method in {'strip_tags', 're'}:  # re for backward compatibility
+            self._reject_unknown_options(method, options, set())
             if method == 're':
                 warnings.warn(
                     f"Filter html2text's method 're' is deprecated: replace with 'strip_tags' "
@@ -301,6 +355,28 @@ class Html2TextFilter(FilterBase):
             return '\n'.join(line.rstrip() for line in stripped_tags.splitlines() if line.strip() != ''), 'text/plain'
 
         raise SettingError(f"Unknown method {method} for filter 'html2text'. ({self.job.get_indexed_location()})")
+
+    def _reject_unknown_options(self, method: str, options: dict[str, Any], allowed: Collection[str]) -> None:
+        """Raises a SettingError if a sub-directive is not one that ``method`` uses (e.g. it is misspelled).
+
+        :param method: The method of the filter.
+        :param options: The sub-directives other than ``method`` (names are case-insensitive).
+        :param allowed: The sub-directives (in lowercase) that the method uses.
+        :raises SettingError: If any sub-directive is not in ``allowed``.
+        """
+        unknown = [name for name in options if name.lower() not in allowed]
+        if not unknown:
+            return
+        known = sorted({*allowed, 'method'})
+        described = []
+        for name in unknown:
+            close = difflib.get_close_matches(name.lower(), known, n=1)
+            described.append(f"'{name}'" + (f" (did you mean '{close[0]}'?)" if close else ''))
+        supported = f'; it supports {", ".join(known)}' if allowed else '; it supports none other than method'
+        raise SettingError(
+            f"Filter html2text's method '{method}' does not support the sub-directive(s) {', '.join(described)}"
+            f'{supported}. ({self.job.get_indexed_location()})'
+        )
 
 
 class FormatXMLFilter(FilterBase):
