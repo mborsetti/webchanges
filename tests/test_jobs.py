@@ -1292,6 +1292,27 @@ def test_format_error_transient_http_error_has_no_traceback(job_data: dict[str, 
         assert 'Traceback (most recent call last)' not in formatted
 
 
+def test_browser_wait_for_url(mocker: pytest_mock.MockerFixture) -> None:
+    """'wait_for_url' is passed to Playwright as the URL if a string, or as the options if a dict."""
+    page = mocker.Mock()
+    job = cast(
+        'BrowserJob',
+        JobBase.unserialize({'url': 'https://www.example.com/', 'use_browser': True, 'wait_until': 'load'}),
+    )
+    job.wait_for_url = 'https://www.example.com/done'
+    job._wait_for_url(page, 1000)
+    page.wait_for_url.assert_called_once_with('https://www.example.com/done', wait_until='load', timeout=1000)
+
+    page.reset_mock()
+    job.wait_for_url = {'url': '**/done', 'timeout': 5000}
+    job._wait_for_url(page)
+    page.wait_for_url.assert_called_once_with(url='**/done', timeout=5000)
+
+    job.wait_for_url = 42  # ty:ignore[invalid-assignment]
+    with pytest.raises(ValueError, match='can only be a string or a dictionary; found a int'):
+        job._wait_for_url(page)
+
+
 def test_format_error_other_exception_keeps_traceback() -> None:
     """Exceptions that are not recognized still fall back to the full traceback, which aids debugging."""
     for job_data in ({'url': 'https://www.example.com/'}, {'command': 'echo test'}):
