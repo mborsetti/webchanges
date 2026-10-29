@@ -126,7 +126,7 @@ dependencies = { file = 'requirements.txt' }
 
 [tool.setuptools.package-data]
 'webchanges' = ['py.typed']
-'webchanges._resources' = ['*.schema.json', '*.schema.sha256']
+'webchanges._resources' = ['*.schema.json', '.*.schema.sha256']  # globs skip dotfiles unless the dot is explicit
 
 # -------------------------- manpages --------------------------
 # https://github.com/praiskup/argparse-manpage/blob/main/README.md

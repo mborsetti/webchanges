@@ -78,6 +78,9 @@ Changed
 
 Fixed
 `````
+* The JSON schemas that :program:`webchanges` copies next to ``config.yaml`` and ``jobs.yaml`` (``config.schema.json``
+  and ``jobs.schema.json``, used by editors for autocompletion and validation) were never copied when installed with
+  ``pip`` or ``uv``, as the package lacked the files used to detect whether they need updating.
 * ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
   descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.
 * ``url`` jobs with ``http_client: curl_cffi`` sent :program:`webchanges`' own ``User-Agent`` header instead of the
