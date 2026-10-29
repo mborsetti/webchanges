@@ -17,13 +17,18 @@ import shutil
 import subprocess
 import sys
 import warnings
+from contextlib import contextmanager
 from pathlib import Path, PurePath
+from typing import TYPE_CHECKING
 
 import platformdirs
 
 from webchanges import __copyright__, __docs_url__, __min_python_version__, __project_name__, __version__
 from webchanges.config import CommandConfig
 from webchanges.util import edit_file, file_ownership_checks, get_new_version_number, import_module_from_source
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 # SIGPIPE is deliberately left at Python's default (ignored, so that writing to a closed pipe or socket raises
 # BrokenPipeError). Restoring the system default (SIG_DFL) would make the OS kill the process outright, with no error
@@ -948,6 +953,27 @@ def _stdout_is_broken() -> bool:
     return False
 
 
+@contextmanager
+def exit_on_user_error(verbose: int | None, errors: tuple[type[Exception], ...]) -> Generator[None]:
+    """Exits with 1 showing only the message if one of ``errors``, an error the user is to fix, is raised.
+
+    Such errors (e.g. a YAML syntax error, an unknown directive or a value of the wrong type in the configuration or
+    jobs file) have a message naming the problem, which a traceback would only bury; with -v the exception propagates
+    with its traceback.
+
+    :param verbose: The verbosity level (-v) of the run.
+    :param errors: The exception types that are the user's errors.
+    :raises SystemExit: If one of ``errors`` is raised (and verbose is not set), setting argument to 1.
+    """
+    try:
+        yield
+    except errors as e:
+        if verbose:
+            raise
+        print(f'{str(e).rstrip()}\n\nRun with -v to also show the traceback.', file=sys.stderr)
+        sys.exit(1)
+
+
 def main() -> None:
     """The entry point (console script and `python -m webchanges`): runs the program.
 
@@ -1030,6 +1056,8 @@ def _main() -> None:  # pragma: no cover
     handle_unitialized_actions(command_config, default_config_file)
 
     # Only now, after configuring logging, we can load other modules
+    import yaml
+
     from webchanges.command import UrlwatchCommand
     from webchanges.main import Urlwatch
     from webchanges.storage import (
@@ -1040,6 +1068,9 @@ def _main() -> None:  # pragma: no cover
         YamlConfigStorage,
         YamlJobsStorage,
     )
+
+    # The errors in the configuration and jobs files found when loading them
+    file_errors = (ValueError, yaml.YAMLError)
 
     # Locate config, jobs, hooks and database files
     command_config.config_file = locate_storage_file(
@@ -1071,7 +1102,8 @@ def _main() -> None:  # pragma: no cover
         logger.debug('Hooks files to be loaded: %s', command_config.hooks_files)
         for hooks_file in command_config.hooks_files:
             load_hooks(hooks_file, is_default=not command_config.hooks_files_inputted)
-    config_storage.load()
+    with exit_on_user_error(command_config.verbose, file_errors):
+        config_storage.load()
 
     # Setup database API
     database_engine = command_config.database_engine or config_storage.config.get('database', {}).get('engine')
@@ -1095,8 +1127,9 @@ def _main() -> None:  # pragma: no cover
     # Setup jobs file API
     jobs_storage = YamlJobsStorage(command_config.jobs_files)  # storage.py
 
-    # Setup 'webchanges'
-    urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py
+    # Setup 'webchanges' (which loads the jobs)
+    with exit_on_user_error(command_config.verbose, file_errors):
+        urlwatcher = Urlwatch(command_config, config_storage, ssdb_storage, jobs_storage)  # main.py
     urlwatch_command = UrlwatchCommand(urlwatcher)  # command.py
 
     # Run 'webchanges', starting with processing command line arguments

@@ -58,6 +58,9 @@ Changed
   configuration and the password stored in the keyring (``--xmpp-login``) are unchanged; install the new library with
   ``pip install --upgrade webchanges[xmpp]``. The connection is now made once for all the messages of a report rather
   than once per message, and gives up with an error after 60 seconds if no session can be established.
+* An error in the configuration or jobs file found when starting (e.g. a YAML syntax error, an unrecognized directive
+  or a value of the wrong type) is now shown as its message only, and :program:`webchanges` exits with code 1; it was
+  preceded by a Python traceback that buried it. Run with ``-v`` to also show the traceback.
 * ``ai_google`` differ: when an HTTP 429 or 503 error is not retried automatically, the error summary now states the
   specific reason (no usable retry delay in the response, or the requested delay exceeding the limit) instead of
   listing both; the total wait after retries is shown without a trailing ``.0``.
@@ -73,6 +76,7 @@ Fixed
 * ``url`` jobs with ``use_browser: true``, ``initialization_url`` and ``initialization_js`` failed when
   ``wait_for_url`` was a dict (of Playwright options) instead of a string, and an invalid ``wait_for_url`` raised an
   ``AttributeError`` instead of the intended error message.
+* The error for a configuration value of the wrong type ended with a stray closing parenthesis.
 
 Internals impacting hooks.py
 ````````````````````````````

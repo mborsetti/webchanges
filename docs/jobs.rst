@@ -18,6 +18,38 @@ with the command ``webchanges --edit-jobs`` or using any text editor.
    A JSON Schema ``jobs.schema.json`` is now installed in the same directory as ``--jobs`` to enable editors to provide
    autocompletion and validation.
 
+.. _job_type_checking:
+
+**Type checking**
+
+When :program:`webchanges` starts, the value of each directive of each job is checked against the type of value the
+directive takes (e.g. ``true`` or ``false`` for :ref:`suppress_errors`), so that a wrong value stops the run at once
+with an error naming the job and the directive, rather than causing a failure (or being misread) later on. For
+example, this job:
+
+.. code-block:: yaml
+
+   # yaml-language-server: $schema=jobs.schema.json
+   url: https://example.com/
+   suppress_errors: "true"  # INCORRECT: within quotes, true is a string and not a boolean
+
+stops :program:`webchanges` (with exit code 1) with this error, followed by the job as it was read (run with ``-v``
+to also show the Python traceback):
+
+.. code-block:: text
+
+   Error in directive 'suppress_errors' of job 1:
+   str did not match any element in the union:
+     bool: is not an instance of bool
+     NoneType: is not an instance of NoneType
+
+Here ``NoneType`` refers to leaving the directive out. An editor that uses ``jobs.schema.json`` (see above) flags most
+such errors as you type. The check is made with the `typeguard <https://pypi.org/project/typeguard/>`__ package if it
+is installed, and otherwise with a copy of it bundled with :program:`webchanges`.
+
+.. versionadded:: 3.36
+   Type checking of the values of job directives.
+
 **YAML tips**
 
 The YAML syntax has lots of idiosyncrasies that make it finicky, and new users often have issues with it. Below are

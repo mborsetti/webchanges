@@ -19,6 +19,7 @@ from webchanges import __min_python_version__, __project_name__, __version__
 from webchanges import cli as cli_module
 from webchanges.cli import (
     _expand_glob_files,
+    exit_on_user_error,
     first_run,
     handle_unitialized_actions,
     load_hooks,
@@ -853,6 +854,31 @@ def test_load_hooks_missing_default_file_logs_info(
         load_hooks(missing, is_default=True)
     assert len(recwarn) == 0
     assert f'Hooks file {missing} does not exist or is not a file' in caplog.text
+
+
+def test_exit_on_user_error_shows_only_the_message(capsys: pytest.CaptureFixture[str]) -> None:
+    """A user's error (e.g. in the configuration or jobs file) exits with 1, showing its message without a traceback."""
+    import yaml
+
+    file_errors = (ValueError, yaml.YAMLError)
+    with pytest.raises(SystemExit) as exc_info, exit_on_user_error(None, file_errors):
+        raise ValueError("Error in directive 'suppress_errors' of job 1:\n")
+    assert exc_info.value.code == 1
+    assert capsys.readouterr().err == (
+        "Error in directive 'suppress_errors' of job 1:\n\nRun with -v to also show the traceback.\n"
+    )
+
+    with pytest.raises(SystemExit), exit_on_user_error(0, file_errors):
+        yaml.safe_load('a: [unclosed')
+    assert capsys.readouterr().err.startswith('while parsing a flow sequence')
+
+
+def test_exit_on_user_error_verbose_or_other_errors_propagate() -> None:
+    """With -v the error keeps its traceback; exceptions other than the ones given are never caught."""
+    with pytest.raises(ValueError, match='bad value'), exit_on_user_error(1, (ValueError,)):
+        raise ValueError('bad value')
+    with pytest.raises(KeyError), exit_on_user_error(None, (ValueError,)):
+        raise KeyError('a bug')
 
 
 def test_update_schema_hashes_script(tmp_path: Path) -> None:
