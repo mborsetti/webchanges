@@ -44,6 +44,26 @@ configuration file:
    A JSON Schema ``config.schema.json`` is now installed in the same directory as ``--config`` to enable editors to
    provide autocompletion and validation.
 
+.. _configuration_type_checking:
+
+When :program:`webchanges` starts, the value of each key of the configuration file is checked against the type of
+value the key takes (e.g. ``true`` or ``false`` for the keys of :ref:`display <configuration_display>`), and a wrong
+value stops the run at once with an error naming the key. For example, ``new: "true"`` in the ``display`` section (in
+quotes, ``true`` is a string and not a boolean) stops :program:`webchanges` (with exit code 1) with this error (run
+with ``-v`` to also show the Python traceback):
+
+.. code-block:: text
+
+   Found invalid data in configuration file /home/user/.config/webchanges/config.yaml entry:
+   value of key 'new' of value of key 'display' of dict is not an instance of bool
+
+An editor that uses ``config.schema.json`` (see above) flags most such errors as you type. As for :ref:`jobs
+<job_type_checking>`, the check is made with the `typeguard <https://pypi.org/project/typeguard/>`__ package if it is
+installed, and otherwise with a copy of it bundled with :program:`webchanges`.
+
+.. versionadded:: 3.36
+   Type checking of the values of the configuration file.
+
 .. _configuration_display:
 
 Display

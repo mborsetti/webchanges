@@ -283,7 +283,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
             for legacy_key, key in LEGACY_JOB_DEFAULTS_KEYS.items():
                 if legacy_key in job_defaults:
                     if key in job_defaults:
-                        raise KeyError(
+                        raise ValueError(
                             f"Found both '{legacy_key}' and '{key}' in job_defaults in config, a duplicate. Please "
                             f"rename '{legacy_key}' to '{key}', merging the two."
                         )
@@ -341,7 +341,7 @@ class YamlConfigStorage(BaseYamlFileStorage):
                 config_no_remarks = self.remove_remark_keys(config)
                 validate_config(config_no_remarks)
             except TypeCheckError as exc:
-                raise ValueError(f'Found invalid data in configuration file {self.filename} entry:\n{exc})') from None
+                raise ValueError(f'Found invalid data in configuration file {self.filename} entry:\n{exc}') from None
 
             # format headers and cookies (a null one is kept as removed, so that it stops the less specific defaults
             # from supplying it)

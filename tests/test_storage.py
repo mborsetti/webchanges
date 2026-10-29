@@ -395,7 +395,7 @@ def test_load_job_defaults_null_cookie_removes_all_jobs_one(tmp_path: Path) -> N
 def test_load_legacy_and_new_job_defaults_key(tmp_path: Path) -> None:
     """A legacy job_defaults key alongside the job-kind one that replaces it is a duplicate."""
     cfg = _write_config_job_defaults(tmp_path, {'url': {'timeout': 10}, 'url_jobs': {'timeout': 20}})
-    with pytest.raises(KeyError, match="Found both 'url' and 'url_jobs'"):
+    with pytest.raises(ValueError, match="Found both 'url' and 'url_jobs'"):
         YamlConfigStorage(cfg).load()
 
 
