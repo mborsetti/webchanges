@@ -18,7 +18,7 @@ from webchanges.filters import FilterBase, Html2TextFilter
 from webchanges.handler import JobState
 from webchanges.jobs import JobBase, UrlJob
 from webchanges.storage import SsdbDirStorage
-from webchanges.util import mark_to_html
+from webchanges.util import SettingError, mark_to_html
 
 logger = logging.getLogger(__name__)
 
@@ -315,8 +315,8 @@ FILTER_EXCEPTION_CASES: list[tuple[str, str, str, dict[str, Any], type[Exception
         (kind, 'a', 'text/plain', subfilter, exc_type, expected.format(kind=kind))
         for kind in ('keep_lines_containing', 'delete_lines_containing')
         for subfilter, exc_type, expected in (
-            ({'text': 2}, TypeError, "The '{kind}' filter requires a string but you provided a int. (Job 0: "),
-            ({'re': 2}, TypeError, "The '{kind}' filter requires a string but you provided a int. (Job 0: "),
+            ({'text': 2}, SettingError, "The '{kind}' filter requires a string but you provided a int. (Job 0: "),
+            ({'re': 2}, SettingError, "The '{kind}' filter requires a string but you provided a int. (Job 0: "),
             ({}, ValueError, "The '{kind}' filter requires a 'text' or 're' sub-directive. (Job 0: "),
         )
     ],
@@ -402,6 +402,19 @@ FILTER_EXCEPTION_CASES: list[tuple[str, str, str, dict[str, Any], type[Exception
         ValueError,
         "The 'ocr' filter needs bytes input (is it the first filter?). (Job 0: ",
     ),
+    # Invalid expressions given by the user are reported as a SettingError naming them, not as the library's error
+    *[
+        (kind, 'a', 'text/plain', subfilter, SettingError, f"The '{kind}' filter's regular expression is invalid: ")
+        for kind, subfilter in (
+            ('keep_lines_containing', {'re': '('}),
+            ('delete_lines_containing', {'re': '('}),
+            ('re.sub', {'pattern': '('}),
+            ('re.findall', {'pattern': '('}),
+            ('between', {'start': '(', 'end': 'x'}),
+        )
+    ],
+    ('css', '<div>a</div>', 'text/html', {'selector': 'div[[['}, SettingError, "Job 0: The 'css' filter's expression"),
+    ('xpath', '<div>a</div>', 'text/html', {'path': '//['}, SettingError, "Job 0: The 'xpath' filter's expression"),
 ]
 
 
@@ -438,6 +451,7 @@ def test_filter_exceptions(
     [
         ('a', {}, "The 'jq' filter needs a query. (Job 0: "),
         ('{""""""}', {'query': 'any'}, "The 'jq' filter needs valid JSON. (Job 0: "),
+        ('{}', {'query': '.['}, "The 'jq' filter's query is invalid: jq: error: syntax error"),
     ],
 )
 def test_filter_exceptions_jq(data: str, subfilter: dict[str, Any], expected: str) -> None:

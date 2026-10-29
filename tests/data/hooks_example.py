@@ -8,6 +8,7 @@ from webchanges.filters import AutoMatchFilter, FilterBase, RegexMatchFilter
 from webchanges.handler import JobState
 from webchanges.jobs import UrlJob
 from webchanges.reporters import HtmlReporter, TextReporter
+from webchanges.util import SettingError
 
 
 class CustomLoginJob(UrlJob):
@@ -38,7 +39,8 @@ class CaseFilter(FilterBase):
             return data.upper(), mime_type
         if subfilter.get('lower'):
             return data.lower(), mime_type
-        raise ValueError(f'Unknown case subfilter {subfilter}')
+        # A SettingError is shown in the report as its message only, without a traceback
+        raise SettingError(f'Unknown case subfilter {subfilter}')
 
 
 class IndentFilter(FilterBase):

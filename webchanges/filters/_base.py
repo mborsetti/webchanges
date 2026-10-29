@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, Literal, NoReturn
 
 import yaml
 
-from webchanges.util import TrackSubClasses, missing_dependency
+from webchanges.util import SettingError, TrackSubClasses, missing_dependency
 
 if TYPE_CHECKING:
     import re
@@ -129,13 +129,13 @@ class FilterBase(metaclass=TrackSubClasses):
             filtercls = cls.__subclasses__.get(filter_kind, None)
 
             if filtercls is None:
-                raise ValueError(
+                raise SettingError(
                     f'Job {job_index_number}: Unknown filter kind: {filter_kind} (subfilter or filter directive(s): '
                     f'{subfilter}).'
                 )
 
             if getattr(filtercls, '__no_subfilter__', False) and subfilter:
-                raise ValueError(
+                raise SettingError(
                     f'Job {job_index_number}: No subfilters or filter directives supported for {filter_kind}.'
                 )
 
@@ -145,12 +145,12 @@ class FilterBase(metaclass=TrackSubClasses):
                 unknown_keys = provided_keys.difference(allowed_keys)
                 if unknown_keys and '<any>' not in allowed_keys:
                     if allowed_keys:
-                        raise ValueError(
+                        raise SettingError(
                             f'Job {job_index_number}: Filter {filter_kind} does not support subfilter or filter '
                             f'directive(s) {", ".join(unknown_keys)}. Only {", ".join(allowed_keys)} are supported.'
                         )
                     else:
-                        raise ValueError(
+                        raise SettingError(
                             f'Job {job_index_number}: Filter {filter_kind} does not support any subfilters or filter '
                             f'directives, but {", ".join(unknown_keys)} was supplied.'
                         )
@@ -196,7 +196,7 @@ class FilterBase(metaclass=TrackSubClasses):
                 elif isinstance(item, dict):
                     filter_kind, subfilter = next(iter(item.items()))
                 else:
-                    raise ValueError(
+                    raise SettingError(
                         f'Job {job_index_number}: Subfilter or filter directive(s) must be a string or a dictionary.'
                     )
 
