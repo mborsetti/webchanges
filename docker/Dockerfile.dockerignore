@@ -1,0 +1,13 @@
+# Build context for docker/Dockerfile: only what building the package and the image needs (allow-list, so that local
+# files such as credentials never enter the context)
+*
+!docker/crontab
+!docker/entrypoint.sh
+!LICENSE.md
+!pyproject.toml
+!README.rst
+!requirements.txt
+!setup.py
+!tools/get_manpages_parser.py
+!webchanges/
+**/__pycache__

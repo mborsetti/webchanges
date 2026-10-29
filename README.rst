@@ -63,9 +63,10 @@ On Windows with Python 3.15, first run ``set PYYAML_FORCE_LIBYAML=0`` (in PowerS
 
 Other ways to run
 -----------------
-- In a `Docker <https://www.docker.com/>`__ container: a minimal implementation (no browser) is `here
-  <https://github.com/yubiuser/webchanges-docker>`__, and one with a browser is `here
-  <https://github.com/jhedlund/webchanges-docker>`__.
+- In a `Docker <https://www.docker.com/>`__ container: download a third-party container, `yubiuser/webchanges-docker
+  <https://github.com/yubiuser/webchanges-docker>`__ (no browser) or `jhedlund/webchanges-docker
+  <https://github.com/jhedlund/webchanges-docker>`__ (with a browser), or adapt the tested `sample Dockerfile
+  <https://webchanges.readthedocs.io/en/stable/advanced.html#docker-sample>`__ (no browser).
 - As a `GitHub Action <https://docs.github.com/en/actions>`__: an implementation is `here
   <https://github.com/swimmwatch/webchanges-action>`__.
 
