@@ -39,6 +39,12 @@ Version NEXT
 -------------------
 Unreleased
 
+Added
+`````
+* A tested sample Dockerfile (``docker/Dockerfile``, with a ``compose.yaml`` file) that you can adapt to build a
+  container from the source code. See `Sample Dockerfile
+  <https://webchanges.readthedocs.io/en/stable/advanced.html#docker-sample>`__.
+
 Changed
 ```````
 * The default HTTP client is now `httpx2 <https://github.com/pydantic/httpx2>`__, the maintained successor of

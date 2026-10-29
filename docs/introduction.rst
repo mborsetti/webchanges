@@ -321,5 +321,5 @@ tinkering with `Termux <https://termux.dev/>`__.
 
 Installing as a Docker container
 --------------------------------
-:program:`webchanges` can be run as a Docker container. Please see `here
-<https://github.com/yubiuser/webchanges-docker>`__ for one such implementation.
+:program:`webchanges` can be run in a Docker container: download a third-party container, or build one from the tested
+sample Dockerfile included in the source code. See :ref:`docker`.

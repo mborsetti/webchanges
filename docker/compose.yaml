@@ -1,0 +1,14 @@
+# Run from the repository root: docker compose -f docker/compose.yaml up -d --build
+services:
+  webchanges:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: webchanges
+    container_name: webchanges
+    environment:
+      TZ: Etc/UTC  # sets the cron schedule's time zone, e.g. Europe/Berlin
+    volumes:
+      - ./data:/data/webchanges
+      # - ./my-crontab:/crontab:ro  # replaces the default schedule
+    restart: unless-stopped

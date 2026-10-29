@@ -1,0 +1,5 @@
+# Runs as user webchanges, whose default files are in /data/webchanges. Replace by mounting your own file at /crontab.
+# minute hour day-of-month month day-of-week command
+*/15 * * * * webchanges
+# Daily check for jobs with errors or no data, printed to the log; name a reporter to send it, e.g. --errors email
+0 8 * * * webchanges --errors

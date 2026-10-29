@@ -9,8 +9,59 @@ Advanced usage
 
 Running in Docker
 -----------------
-:program:`webchanges` can be run in a Docker container. Please see `<https://github.com/yubiuser/webchanges-docker>`__
-for one such implementation.
+You can run :program:`webchanges` in a Docker container that you download, or in one that you build yourself from the
+sample Dockerfile included in the source code.
+
+Third-party containers you can download:
+
+* `yubiuser/webchanges-docker <https://github.com/yubiuser/webchanges-docker>`__ (no browser);
+* `jhedlund/webchanges-docker <https://github.com/jhedlund/webchanges-docker>`__ (with a browser).
+
+.. _docker_sample:
+
+Sample Dockerfile
+`````````````````
+The ``docker`` directory of the `source code <https://github.com/mborsetti/webchanges>`__ contains a tested sample
+Dockerfile that you can use as is or adapt; the automated tests of :program:`webchanges` build it, start the container
+and run jobs in it. It builds an Alpine Linux image running :program:`webchanges` on a schedule. Besides
+the required packages, the image includes those needed by:
+
+* the ``beautify``, ``html2text`` (``bs4`` method), ``ical2text``, ``jq`` and ``pypdf`` filters;
+* the ``deepdiff`` differ and the ``pushover`` reporter;
+* the ``curl_cffi`` and ``requests`` HTTP clients, and the ``--rollback-database`` command-line option.
+
+It cannot run browser jobs (``use_browser: true``), as the browser automation library does not support Alpine Linux.
+
+Inside the container, :program:`webchanges` runs as a user called ``webchanges`` (user ID 1000) and keeps all its files
+(``config.yaml``, ``jobs.yaml``, ``hooks.py`` and the ``snapshots.db`` database) in the directory mounted at
+``/data/webchanges``. To build and start it with `Docker Compose <https://docs.docker.com/compose/>`__, run from the
+directory of the source code::
+
+   docker compose -f docker/compose.yaml up -d --build  # build the image and start the container
+
+When the container starts, :program:`webchanges` creates any missing files in ``docker/data`` and lists the jobs in
+the log; edit ``jobs.yaml`` and ``config.yaml`` there (see :ref:`jobs` and :ref:`configuration`). If your user ID is not 1000, add ``args: {UID: <your ID>}`` under
+``build:`` in ``compose.yaml`` (or ``--build-arg UID=<your ID>`` to ``docker build``), so that you can edit the files.
+
+By default :program:`webchanges` runs every 15 minutes and, daily at 08:00, :ref:`--errors <error>` prints the jobs with
+errors to the log. To change the schedule, write your own crontab file (starting from ``docker/crontab``) and mount it
+at ``/crontab``. The schedule follows the ``TZ`` environment variable (for example ``TZ: Europe/Berlin`` in
+``compose.yaml``), and is in UTC if it is not set.
+
+The reports of the ``stdout`` reporter, and any errors, are in the container's log::
+
+   docker compose -f docker/compose.yaml logs -f  # follow the log
+
+Run other commands as user ``webchanges``. Run as root, :program:`webchanges` looks for its files in the wrong
+directory and creates files you cannot edit::
+
+   docker compose -f docker/compose.yaml exec -u webchanges webchanges webchanges --list  # list the jobs
+   docker compose -f docker/compose.yaml exec -u webchanges webchanges webchanges --test 2  # test job 2
+
+A ``hooks.py`` file can only import the packages installed in the image. To add packages, build an image ``FROM`` this
+one that installs them in its ``/opt/venv`` virtual environment.
+
+.. versionadded:: 3.40
 
 
 .. _post:

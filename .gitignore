@@ -21,6 +21,7 @@ __pycache__/
 /coverage.xml
 /credentials*
 /Dockerfile
+/docker/data/
 /test_vendored.py
 /ty.toml
 

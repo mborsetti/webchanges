@@ -236,6 +236,79 @@ jobs:
           fail-on-error: false
         continue-on-error: true
 
+  # Builds docker/Dockerfile (documented as a tested sample) and checks the running container: start-up files, crontab,
+  # optional packages, time zones, and a run of jobs as cron runs them. Nothing is published.
+  docker:
+    name: Test the sample Dockerfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    needs: [check-skip]
+    if: needs.check-skip.outputs.skip != 'true'
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: audit
+
+      - name: Check out repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The runner's user ID (1001) is not the image's default (1000); building with it lets the container write to the
+      # mounted directory, and tests the UID build argument.
+      - name: Build the image
+        run: docker build -f docker/Dockerfile --build-arg UID="$(id -u)" -t webchanges-ci .
+
+      - name: Start the container
+        run: |
+          mkdir data
+          docker run -d --name webchanges-ci -e TZ=Europe/Berlin -v "$PWD/data:/data/webchanges" webchanges-ci
+          # entrypoint.sh installs the crontab last, just before starting crond
+          timeout 60 sh -c 'until docker exec webchanges-ci crontab -l -u webchanges > /dev/null 2>&1; do sleep 1; done'
+
+      - name: Check the files created at start-up and the crontab
+        run: |
+          ls -la data
+          for file in config.yaml jobs.yaml config.schema.json jobs.schema.json; do
+            test "$(stat -c %u "data/$file")" = "$(id -u)" || { echo "::error::data/$file missing or not owned by UID $(id -u)"; exit 1; }
+          done
+          docker exec webchanges-ci crontab -l -u webchanges | grep -qx '\*/15 \* \* \* \* webchanges'
+
+      - name: Check the optional packages and time zones
+        run: |
+          docker exec webchanges-ci python -c 'import bs4, chump, cssbeautifier, curl_cffi, dateutil, deepdiff, html5lib, jq, jsbeautifier, pypdf, requests, vobject, xmltodict'
+          docker exec webchanges-ci python -c 'from zoneinfo import ZoneInfo; ZoneInfo("Europe/Berlin")'
+
+      # su keeps the container's environment (PATH included) and sets HOME, as crond does for the jobs it runs.
+      - name: Run jobs as cron runs them
+        run: |
+          cat > data/jobs.yaml << 'EOF'
+          name: shell
+          command: echo hello
+          ---
+          name: jq
+          command: >-
+            echo '{"a": {"b": 1}}'
+          filters:
+            - jq: .a
+          ---
+          name: web
+          url: https://example.com/
+          filters:
+            - html2text:
+                method: bs4
+          EOF
+          docker exec webchanges-ci su webchanges -c webchanges | tee report.txt
+          test "$(grep -c '^[0-9]*\. NEW: ' report.txt)" -eq 3
+          test -f data/snapshots.db
+
+      - name: Show the container log
+        if: always()
+        run: docker logs webchanges-ci
+
   coveralls:
     name: Completion -> coveralls.io
     needs: [test]
@@ -258,7 +331,7 @@ jobs:
     permissions:
       contents: write  # IMPORTANT: this permission is mandatory to create the GitHub release
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
-    needs: [test]
+    needs: [test, docker]
     # ref https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest
