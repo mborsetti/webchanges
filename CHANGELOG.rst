@@ -75,7 +75,9 @@ Fixed
 * ``keep_lines_containing`` and  ``delete_lines_containing`` filters: Improved error messages for invalid regular
   expression in ``re``.
 * ``html2text`` filter: Sub-directives are now checked and misspelled ones such as ``pad_table``, which were silently
-  ignored, now raise an error.
+  ignored, now raise an error; so does a method given as a sub-directive (e.g. ``strip_tags: true`` instead of
+  ``method: strip_tags``), which ran the default method instead. The bundled JSON Schema now flags them in editors too,
+  offers all the options of the ``html2text`` method, and no longer offers the unsupported ``decode_errors``.
 * ``ai_google`` differ: Improved retry error messages.
 * ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
   descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.

@@ -18,6 +18,7 @@ from typing import Any
 import pytest
 
 from webchanges.filters import FilterBase
+from webchanges.filters._html import HTML2TEXT_METHODS, HTML2TEXT_OPTIONS
 from webchanges.jobs import JobBase
 from webchanges.reporters import ReporterBase
 from webchanges.storage import DEFAULT_CONFIG
@@ -164,6 +165,20 @@ def test_filter_subdirectives_in_schema(kind: str) -> None:
         assert code - {'<any>'} - schema == set()
     else:
         assert code == schema
+
+
+def test_html2text_subdirectives_in_schema() -> None:
+    """The schema of the html2text filter lists exactly the sub-directives that the code accepts, and forbids others.
+
+    Its '<any>' in the code is the html2text package's options in HTML2TEXT_OPTIONS, which the code checks.
+    """
+    node = SCHEMA_FILTERS['html2text']
+    # 'parser' is a sub-directive of the 'bs4' method absent from __supported_subfilters__ (see FILTER_DOCS_EXCEPTIONS)
+    code = code_subfilters(code_filters()['html2text']) - {'<any>'} | HTML2TEXT_OPTIONS | {'parser'}
+    assert schema_properties(node) == code
+    objects = [alt for alt in schema_alternatives(node) if 'properties' in alt]
+    assert all(alt.get('additionalProperties') is False for alt in objects)
+    assert {method for alt in objects for method in alt['properties']['method']['enum']} == HTML2TEXT_METHODS
 
 
 @pytest.mark.parametrize('kind', sorted(code_filters()))

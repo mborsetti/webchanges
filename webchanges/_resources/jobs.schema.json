@@ -1151,83 +1151,193 @@
                   "description": "Conversion method to use.",
                   "default": "html2text"
                 },
-                "unicode_snob": {
+                "backquote_code_style": {
                   "type": "boolean",
-                  "description": "Use Unicode characters instead of ASCII.",
-                  "default": true
+                  "description": "Convert code blocks to backquoted (```) blocks (html2text method).",
+                  "default": false
                 },
                 "body_width": {
                   "type": "integer",
-                  "description": "Character count to wrap lines at (0 for no wrapping).",
+                  "description": "Character count to wrap lines at, 0 for no wrapping (html2text method).",
                   "default": 0
+                },
+                "bypass_tables": {
+                  "type": "boolean",
+                  "description": "Format tables in HTML rather than Markdown syntax (html2text method).",
+                  "default": false
+                },
+                "close_quote": {
+                  "type": "string",
+                  "description": "Character used to close quotes (<q> tags) (html2text method).",
+                  "default": "\""
+                },
+                "default_image_alt": {
+                  "type": "string",
+                  "description": "Alt text for images that have none (html2text method).",
+                  "default": ""
+                },
+                "emphasis_mark": {
+                  "type": "string",
+                  "description": "Character used for emphasized (italic) text (html2text method).",
+                  "default": "_"
+                },
+                "escape_snob": {
+                  "type": "boolean",
+                  "description": "Escape all special Markdown characters; less readable, but avoids corner-case formatting issues (html2text method).",
+                  "default": false
+                },
+                "google_doc": {
+                  "type": "boolean",
+                  "description": "Convert an HTML-exported Google Document (html2text method).",
+                  "default": false
+                },
+                "google_list_indent": {
+                  "type": "integer",
+                  "description": "Number of pixels Google indents nested lists, with google_doc (html2text method).",
+                  "default": 36
+                },
+                "hide_strikethrough": {
+                  "type": "boolean",
+                  "description": "Hide strike-through text, with google_doc (html2text method).",
+                  "default": false
+                },
+                "ignore_emphasis": {
+                  "type": "boolean",
+                  "description": "Ignore emphasis (bold and italic) tags (html2text method).",
+                  "default": false
                 },
                 "ignore_images": {
                   "type": "boolean",
-                  "description": "Ignore image tags.",
+                  "description": "Ignore image tags (html2text method).",
                   "default": true
+                },
+                "ignore_links": {
+                  "type": "boolean",
+                  "description": "Ignore anchor tags, keeping their text (html2text method).",
+                  "default": false
+                },
+                "ignore_mailto_links": {
+                  "type": "boolean",
+                  "description": "Ignore mailto: links (html2text method).",
+                  "default": false
+                },
+                "ignore_tables": {
+                  "type": "boolean",
+                  "description": "Ignore table tags, keeping their content (html2text method).",
+                  "default": false
+                },
+                "images_as_html": {
+                  "type": "boolean",
+                  "description": "Keep images as raw HTML <img> tags (html2text method).",
+                  "default": false
+                },
+                "images_to_alt": {
+                  "type": "boolean",
+                  "description": "Replace images with their alt text (html2text method).",
+                  "default": false
+                },
+                "images_with_size": {
+                  "type": "boolean",
+                  "description": "Keep images with a width or height as raw HTML <img> tags with their size (html2text method).",
+                  "default": false
+                },
+                "include_sup_sub": {
+                  "type": "boolean",
+                  "description": "Keep <sup> and <sub> tags (html2text method).",
+                  "default": false
+                },
+                "inline_links": {
+                  "type": "boolean",
+                  "description": "Use inline rather than reference links (html2text method).",
+                  "default": true
+                },
+                "links_each_paragraph": {
+                  "type": "boolean",
+                  "description": "Put reference links after each paragraph instead of at the end (html2text method).",
+                  "default": false
+                },
+                "mark_code": {
+                  "type": "boolean",
+                  "description": "Wrap <pre> blocks in [code]...[/code] tags (html2text method).",
+                  "default": false
+                },
+                "open_quote": {
+                  "type": "string",
+                  "description": "Character used to open quotes (<q> tags) (html2text method).",
+                  "default": "\""
+                },
+                "pad_tables": {
+                  "type": "boolean",
+                  "description": "Pad table cells to equal column width (html2text method).",
+                  "default": false
+                },
+                "protect_links": {
+                  "type": "boolean",
+                  "description": "Protect links from line breaks by surrounding them with angle brackets (html2text method).",
+                  "default": false
                 },
                 "single_line_break": {
                   "type": "boolean",
-                  "description": "Use single line breaks instead of double.",
+                  "description": "Use a single line break after a block element rather than two (html2text method).",
+                  "default": true
+                },
+                "skip_internal_links": {
+                  "type": "boolean",
+                  "description": "Skip internal links (href=\"#anchor\") (html2text method).",
+                  "default": true
+                },
+                "strong_mark": {
+                  "type": "string",
+                  "description": "Characters used for strong (bold) text (html2text method).",
+                  "default": "**"
+                },
+                "ul_item_mark": {
+                  "type": "string",
+                  "description": "Character used for unordered list items (html2text method).",
+                  "default": "*"
+                },
+                "unicode_snob": {
+                  "type": "boolean",
+                  "description": "Use Unicode characters instead of their ASCII replacements (html2text method).",
+                  "default": true
+                },
+                "use_automatic_links": {
+                  "type": "boolean",
+                  "description": "Convert absolute links whose text is the URL to the <URL> format (html2text method).",
                   "default": true
                 },
                 "wrap_links": {
                   "type": "boolean",
-                  "description": "Wrap long links.",
+                  "description": "Wrap links when wrapping lines at body_width (html2text method).",
                   "default": false
                 },
-                "pad_tables": {
+                "wrap_list_items": {
                   "type": "boolean",
-                  "description": "Pad table cells for alignment (html2text method)."
+                  "description": "Wrap list items when wrapping lines at body_width (html2text method).",
+                  "default": false
                 },
-                "inline_links": {
+                "wrap_tables": {
                   "type": "boolean",
-                  "description": "Use inline links instead of reference links."
-                },
-                "protect_links": {
-                  "type": "boolean",
-                  "description": "Protect links from line breaks."
-                },
-                "images_to_alt": {
-                  "type": "boolean",
-                  "description": "Replace images with their alt text."
-                },
-                "images_with_size": {
-                  "type": "boolean",
-                  "description": "Include image size in output."
-                },
-                "ignore_links": {
-                  "type": "boolean",
-                  "description": "Ignore anchor tags."
-                },
-                "ignore_emphasis": {
-                  "type": "boolean",
-                  "description": "Ignore emphasis tags."
-                },
-                "ignore_tables": {
-                  "type": "boolean",
-                  "description": "Ignore table structure."
-                },
-                "decode_errors": {
-                  "type": "string",
-                  "description": "How to handle decode errors."
+                  "description": "Wrap tables when wrapping lines at body_width (html2text method).",
+                  "default": false
                 },
                 "parser": {
                   "type": "string",
-                  "description": "HTML parser to use (for bs4 method).",
+                  "description": "HTML parser to use (bs4 method).",
                   "default": "lxml"
                 },
                 "separator": {
                   "type": "string",
-                  "description": "Separator between elements (for bs4 method).",
+                  "description": "Separator between strings (bs4 method).",
                   "default": ""
                 },
                 "strip": {
                   "type": "boolean",
-                  "description": "Strip whitespace from text (for bs4 method).",
+                  "description": "Strip whitespace from strings before concatenating them (bs4 method).",
                   "default": false
                 }
-              }
+              },
+              "additionalProperties": false
             }
           ],
           "description": "Converts HTML to plain text."

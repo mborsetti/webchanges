@@ -192,6 +192,9 @@ HTML2TEXT_OPTIONS = frozenset(
     }
 )
 
+# The values of the html2text filter's method sub-directive (excluding deprecated ones)
+HTML2TEXT_METHODS = frozenset({'html2text', 'bs4', 'strip_tags'})
+
 
 class Html2TextFilter(FilterBase):
     """Convert a string consisting of HTML to Unicode plain text for easy difference checking."""
@@ -370,6 +373,9 @@ class Html2TextFilter(FilterBase):
         known = sorted({*allowed, 'method'})
         described = []
         for name in unknown:
+            if name.lower() in HTML2TEXT_METHODS:  # e.g. 'strip_tags: true' instead of 'method: strip_tags'
+                described.append(f"'{name}' (did you mean 'method: {name.lower()}'?)")
+                continue
             close = difflib.get_close_matches(name.lower(), known, n=1)
             described.append(f"'{name}'" + (f" (did you mean '{close[0]}'?)" if close else ''))
         supported = f'; it supports {", ".join(known)}' if allowed else '; it supports none other than method'

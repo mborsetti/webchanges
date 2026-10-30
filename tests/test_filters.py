@@ -472,12 +472,13 @@ def test_html2text_options_match_the_installed_package() -> None:
 
     import html2text
 
-    from webchanges.filters._html import HTML2TEXT_OPTIONS
+    from webchanges.filters._html import HTML2TEXT_METHODS, HTML2TEXT_OPTIONS
 
     source = inspect.getsource(html2text.HTML2Text.__init__)
     block = source.split('# Config options', 1)[1].split('if out is None', 1)[0]
     assigned = {line.split('=', 1)[0].strip().removeprefix('self.') for line in block.splitlines() if '=' in line}
     assert assigned - {'split_next_td', 'td_count', 'table_start', 'tag_callback'} == HTML2TEXT_OPTIONS
+    assert not HTML2TEXT_OPTIONS & HTML2TEXT_METHODS  # an option named after a method would get the wrong hint
     parser = html2text.HTML2Text()
     assert all(hasattr(parser, option) for option in HTML2TEXT_OPTIONS)
 
@@ -513,8 +514,22 @@ def test_html2text_options_match_the_installed_package() -> None:
                 'supports none other than method. (Job 0: '
             ),
         ),
+        (
+            {'strip_tags': True},
+            (
+                "Filter html2text's method 'html2text' does not support the sub-directive(s) 'strip_tags' (did you "
+                "mean 'method: strip_tags'?); it supports backquote_code_style, "
+            ),
+        ),
+        (
+            {'method': 'strip_tags', 'BS4': True},
+            (
+                "Filter html2text's method 'strip_tags' does not support the sub-directive(s) 'BS4' (did you mean "
+                "'method: bs4'?); it supports none other than method. (Job 0: "
+            ),
+        ),
     ],
-    ids=['typo-of-method', 'typo-of-option', 'bs4-typo', 'strip_tags-option'],
+    ids=['typo-of-method', 'typo-of-option', 'bs4-typo', 'strip_tags-option', 'method-as-key', 'method-as-key-case'],
 )
 def test_html2text_rejects_unknown_sub_directives(subfilter: dict[str, Any], expected: str) -> None:
     """A sub-directive that the method does not use (e.g. a typo) is a SettingError, not silently ignored."""
