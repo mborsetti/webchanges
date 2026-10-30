@@ -453,7 +453,7 @@ In addition, aGitHub Action implementation of webchanges is available `here
        token: 'YOUR_GITHUB_PERSONAL_ACCESS_TOKEN'
        owner: 'YOUR_GITHUB_USERNAME_OR_ORGANIZATION'
        repo: 'YOUR_GITHUB_REPOSITORY_NAME'
-       title: '[webchanges] Report for {dt}''
+       title: '[webchanges] Report for {dt}'
        labels:
          - 'webchanges'
          - 'bug'
@@ -621,8 +621,6 @@ notifications to a public Matrix room, as the messages quickly become noisy:
    report:
      tz: null  # or whatever you want it to be
      markdown:
-       enabled: true  # don't forget to set this to true! :)
-       markdown: false
        details: false
        footer: false
        minimal: true
@@ -806,7 +804,8 @@ For example, in Windows we can make a MessageBox pop up:
      tz: null  # or whatever you want it to be
      run_command:
        enabled: true  # don't forget to set this to true! :)
-       command: start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
+       command: >-
+         start /MIN PowerShell -Command "Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('{count} changes: {jobs}\n{text}')"
 
 All environment variables are preserved and the following ones added:
 

@@ -525,6 +525,16 @@
             },
             {
               "properties": {
+                "command": {
+                  "type": "string",
+                  "description": "Command to execute for diffing (the 'command' differ, whose name may be omitted when this is its only sub-directive)."
+                }
+              },
+              "required": ["command"],
+              "additionalProperties": false
+            },
+            {
+              "properties": {
                 "name": { "type": "string", "const": "deepdiff" },
                 "data_type": {
                   "type": "string",

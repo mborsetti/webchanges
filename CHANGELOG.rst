@@ -78,6 +78,13 @@ Fixed
   ignored, now raise an error; so does a method given as a sub-directive (e.g. ``strip_tags: true`` instead of
   ``method: strip_tags``), which ran the default method instead. The bundled JSON Schema now flags them in editors too,
   offers all the options of the ``html2text`` method, and no longer offers the unsupported ``decode_errors``.
+* ``github_issue`` reporter: a ``milestone`` given as a number, as in the documentation's example, failed the
+  validation of the configuration file; it can now be a number or a string. See :ref:`here <github_issue>`.
+* The bundled JSON Schema of the configuration file flagged as invalid a file missing directives (e.g. one written by
+  an earlier version, which :program:`webchanges` completes with default values), remarks (keys starting with ``_``)
+  at its top level, and the deprecated ``empty-diff: true``, while accepting misspelled sub-directives of its sections
+  and reporters. The one of the jobs file flagged a ``command`` differ given without its ``name``, which
+  :program:`webchanges` accepts.
 * ``ai_google`` differ: Improved retry error messages.
 * ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
   descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.

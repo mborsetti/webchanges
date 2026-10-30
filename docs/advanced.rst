@@ -468,7 +468,7 @@ most browsers will display each line with an indented bullet point (●), provid
 
    filters:
      - html2text #  example only: can be used with any or no previous filters!
-     - re.sub
+     - re.sub:
          pattern: (?m)^
          repl: '  * '
 

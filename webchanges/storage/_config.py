@@ -125,7 +125,7 @@ class _ConfigReportGithubIssue(_ConfigReporter):
     format_content: str
     assignees: list[str]
     type: str
-    milestone: str
+    milestone: int | str
 
 
 class _ConfigReportGotify(_ConfigReporter):

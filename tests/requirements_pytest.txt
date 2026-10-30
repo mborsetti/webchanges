@@ -23,6 +23,7 @@ html5lib
 httpx2
 jq
 jsbeautifier
+jsonschema  # test_schemas.py
 keyring
 matrix-client
 minidb

@@ -4,7 +4,6 @@
   "title": "Webchanges Configuration File",
   "description": "JSON Schema for the webchanges config.yaml configuration file.",
   "type": "object",
-  "required": ["display", "report", "job_defaults", "differ_defaults", "database", "footnote", "version_check"],
   "properties": {
     "display": {
       "$ref": "#/$defs/_ConfigDisplay",
@@ -46,13 +45,17 @@
       "default": null
     }
   },
+  "patternProperties": {
+    "^_": { "description": "A remark: keys starting with an underscore are ignored." }
+  },
   "additionalProperties": false,
   "$defs": {
     "_ConfigDisplay": {
       "title": "Display",
       "description": "Which job outcomes appear in reports. Changes are always reported.",
       "type": "object",
-      "required": ["new", "error", "unchanged"],
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "new": {
           "type": "boolean",
@@ -70,8 +73,9 @@
           "default": false
         },
         "empty-diff": {
-          "enum": [false],
+          "type": "boolean",
           "description": "Deprecated; use additions_only in the job instead.",
+          "default": false,
           "deprecated": true
         }
       }
@@ -80,7 +84,8 @@
       "title": "Text report format",
       "description": "Settings for the plain-text report (used by stdout, ifttt, mailgun, ntfy, prowl, pushbullet, pushover, run_command, webhook (default), xmpp).",
       "type": "object",
-      "required": ["line_length", "details", "footer", "minimal", "separate"],
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "line_length": {
           "type": "integer",
@@ -113,7 +118,8 @@
       "title": "HTML report format",
       "description": "Settings for the HTML report (used by browser, email with html: true).",
       "type": "object",
-      "required": ["diff", "footer", "separate", "title"],
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "diff": {
           "enum": ["unified", "table"],
@@ -142,7 +148,8 @@
       "title": "Markdown report format",
       "description": "Settings for the Markdown report (used by gotify, matrix, telegram, webhook with markdown: true).",
       "type": "object",
-      "required": ["details", "footer", "minimal", "separate"],
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "details": {
           "type": "boolean",
@@ -170,6 +177,8 @@
       "title": "stdout reporter",
       "description": "Display a text report on standard output (the console).",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -191,6 +200,8 @@
       "title": "Browser reporter",
       "description": "Open the HTML report in the system's default web browser.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -207,6 +218,8 @@
       "title": "Discord reporter",
       "description": "Send the report as a message in a Discord channel via a webhook.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -248,7 +261,8 @@
       "title": "SMTP settings",
       "description": "SMTP server settings used when email.method is 'smtp'.",
       "type": "object",
-      "required": ["host", "user", "port", "starttls", "auth", "insecure_password", "utf_8"],
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "host": {
           "type": "string",
@@ -296,7 +310,8 @@
       "title": "sendmail settings",
       "description": "External sendmail program settings used when email.method is 'sendmail' (Linux only).",
       "type": "object",
-      "required": ["path"],
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "path": {
           "type": "string",
@@ -309,6 +324,8 @@
       "title": "Email reporter",
       "description": "Send the report via email, using either SMTP or the external sendmail program.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -357,6 +374,8 @@
       "title": "GitHub Issue reporter",
       "description": "Submit the Markdown report as a new issue on a GitHub repository. Requires a personal access token with 'public_repo' (public) or 'repo' (private) scope.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -415,7 +434,7 @@
           "default": ""
         },
         "milestone": {
-          "type": "string",
+          "type": ["integer", "string"],
           "description": "Number of the milestone to associate with the issue.",
           "default": ""
         }
@@ -425,6 +444,8 @@
       "title": "Gotify reporter",
       "description": "Send the Markdown report to a Gotify server. Requires an application token created on the Gotify server's Web-UI.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -466,6 +487,8 @@
       "title": "IFTTT reporter",
       "description": "Send the text report as an IFTTT event via the Maker Webhooks service.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -492,6 +515,8 @@
       "title": "Mailgun reporter",
       "description": "Send the text report via email using the Mailgun service.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -543,6 +568,8 @@
       "title": "Matrix reporter",
       "description": "Send the report to a room using the Matrix protocol.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -574,7 +601,8 @@
       "title": "ntfy priorities",
       "description": "Per-event-kind ntfy message priorities. Each value is either an integer 1-5 or a name ('min', 'low', 'default', 'high', 'max').",
       "type": "object",
-      "required": ["default", "new", "changed", "error"],
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "default": {
           "type": ["integer", "string"],
@@ -602,6 +630,8 @@
       "title": "ntfy reporter",
       "description": "Send the text report to an ntfy server (https://ntfy.sh).",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -629,6 +659,8 @@
       "title": "Prowl reporter",
       "description": "Send the text report via Prowl (iOS push notifications).",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -665,6 +697,8 @@
       "title": "Pushbullet reporter",
       "description": "Send the text report via Pushbullet. Note: the underlying 'pushbullet' Python package has not been maintained since 2022.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -686,6 +720,8 @@
       "title": "Pushover reporter",
       "description": "Send the text report via Pushover (https://pushover.net).",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -728,6 +764,8 @@
       "title": "run_command reporter",
       "description": "Run a local command receiving the text report. Substitutes {count}, {jobs}, and {text} in the command string and exposes the WEBCHANGES_REPORT_CONFIG_JSON and WEBCHANGES_CHANGED_JOBS_JSON environment variables.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -749,6 +787,8 @@
       "title": "Telegram reporter",
       "description": "Send the Markdown report via Telegram using the Bot API.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -789,6 +829,8 @@
       "title": "Webhook reporter",
       "description": "Send the report to a webhook endpoint (e.g. Slack, Mattermost).",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -825,6 +867,8 @@
       "title": "XMPP reporter",
       "description": "Send the text report via the XMPP protocol. Use a dedicated XMPP account, never a primary one.",
       "type": "object",
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "tags": {
           "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
@@ -856,29 +900,6 @@
       "title": "Report and reporter settings",
       "description": "Container for report-format settings (text, html, markdown) and reporter settings.",
       "type": "object",
-      "required": [
-        "tz",
-        "text",
-        "html",
-        "markdown",
-        "stdout",
-        "browser",
-        "discord",
-        "email",
-        "github_issue",
-        "gotify",
-        "ifttt",
-        "mailgun",
-        "matrix",
-        "ntfy",
-        "prowl",
-        "pushbullet",
-        "pushover",
-        "run_command",
-        "telegram",
-        "webhook",
-        "xmpp"
-      ],
       "properties": {
         "tz": {
           "type": ["string", "null"],
@@ -1102,7 +1123,8 @@
       "title": "Database",
       "description": "Snapshot database engine and retention.",
       "type": "object",
-      "required": ["engine", "max_snapshots"],
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "engine": {
           "type": "string",
@@ -1121,7 +1143,8 @@
       "title": "Version Check",
       "description": "Settings for the once-a-day check against PyPi for a newer release of webchanges.",
       "type": "object",
-      "required": ["enabled"],
+      "patternProperties": { "^_": {} },
+      "additionalProperties": false,
       "properties": {
         "enabled": {
           "type": "boolean",

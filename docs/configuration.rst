@@ -132,13 +132,13 @@ Here is an example configuration that reports using UTC timezone on standard out
          utf_8: true
        subject: '{count} changes: {jobs}'
        to: 'User <user@example.com>'
-       stdout:
-         color: true  # value can also be bright (same as true) or normal
-         enabled: true
+     stdout:
+       color: true  # value can also be bright (same as true) or normal
+       enabled: true
      markdown:
        minimal: false
-       show_details: true
-       show_footer: true
+       details: true
+       footer: true
        separate: false
 
 Configuration options for reports is described in :ref:`reports <reports>`.

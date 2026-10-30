@@ -928,7 +928,7 @@ Required packages
 To run jobs with this filter, you need to first install :ref:`additional Python packages <optional_packages>` as
 follows:
 
-.. code-block:: yaml
+.. code-block:: bash
 
    uv pip install --upgrade webchanges[jq]
 
