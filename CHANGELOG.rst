@@ -64,6 +64,7 @@ Changed
   can be established.
 * Errors in the configuration or jobs file found at startup, and wrong settings of a filter, differ or reporter, are
   no longer buried in a Python traceback.
+* HTML reports: images in Markdown content are now at most 600 pixels wide (instead of the full width available).
 
 Deprecated
 ``````````

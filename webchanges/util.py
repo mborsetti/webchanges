@@ -534,7 +534,7 @@ def mark_to_html(
     html_out = str(markdowner.convert(text)).rstrip('\n')  # convert markdown to html
     # fixes for Gmail
     html_out = html_out.replace('<a', '<a style="font-family:inherit"')  # fix <a> tag styling
-    html_out = html_out.replace('<img', '<img style="max-width:100%;height:auto;max-height:100%"')
+    html_out = html_out.replace('<img', '<img style="max-width:600px;height:auto"')
     html_out = html_out.replace('<code>', '<span style="font-family:monospace;white-space:pre-wrap">')
     html_out = html_out.replace('</code>', '</span>')
     if 'tables' in markdowner_extras:

@@ -102,7 +102,7 @@ DIFF_TO_HTML_TEST_DATA = [
     (
         ' ![Image](https://example.com/picture.png "picture")',
         (
-            '<td><img style="max-width:100%;height:auto;max-height:100%" src="https://example.com/picture.png"'
+            '<td><img style="max-width:600px;height:auto" src="https://example.com/picture.png"'
             ' alt="Image" title="picture" /></td>'
         ),
     ),
