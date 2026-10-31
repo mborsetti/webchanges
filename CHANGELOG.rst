@@ -44,6 +44,10 @@ Added
 * A tested sample Dockerfile (``docker/Dockerfile``, with a ``compose.yaml`` file) that you can adapt to build a
   container from the source code. See `Sample Dockerfile
   <https://webchanges.readthedocs.io/en/stable/advanced.html#docker-sample>`__.
+* ``ai_google`` differ: New ``diff`` sub-directive that sets the differ generating the diff that follows the summary
+  (e.g. ``diff: wdiff`` for a word-by-word diff), as a name or with sub-directives (e.g. ``diff: {name: unified,
+  context_lines: 5}``); any differ except ``ai_google`` and ``image`` can be used, and its ``differ_defaults`` in the
+  configuration file apply. Defaults to ``unified``, as before. See :ref:`here <ai_google_diff>`.
 
 Changed
 ```````
@@ -60,6 +64,11 @@ Changed
   can be established.
 * Errors in the configuration or jobs file found at startup, and wrong settings of a filter, differ or reporter, are
   no longer buried in a Python traceback.
+
+Deprecated
+``````````
+* ``ai_google`` differ: The ``unified`` sub-directive is deprecated in favor of ``diff``; replace ``unified: {...}``
+  with ``diff: {name: unified, ...}``. It still works but prints a deprecation warning.
 
 Fixed
 `````
@@ -84,8 +93,10 @@ Fixed
   an earlier version, which :program:`webchanges` completes with default values), remarks (keys starting with ``_``)
   at its top level, and the deprecated ``empty-diff: true``, while accepting misspelled sub-directives of its sections
   and reporters. The one of the jobs file flagged a ``command`` differ given without its ``name``, which
-  :program:`webchanges` accepts.
+  :program:`webchanges` accepts, and the ``color`` sub-directive of the ``wdiff`` differ.
 * ``ai_google`` differ: Improved retry error messages.
+* ``wdiff`` differ: With ``color: false``, text reports of data with more lines than ``context_lines`` showed no
+  changes at all, only a ``@@`` line for the whole data.
 * ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
   descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.
 

@@ -417,23 +417,6 @@
           "oneOf": [
             {
               "properties": {
-                "name": { "type": "string", "const": "unified" },
-                "context_lines": {
-                  "type": "integer",
-                  "description": "Number of context lines around changes.",
-                  "default": 3
-                },
-                "range_info": {
-                  "type": "boolean",
-                  "description": "Include range information (@@ lines).",
-                  "default": true
-                }
-              },
-              "required": ["name"],
-              "additionalProperties": false
-            },
-            {
-              "properties": {
                 "name": { "type": "string", "const": "ai_google" },
                 "model": {
                   "type": "string",
@@ -489,6 +472,18 @@
                   "type": "array",
                   "description": "Tools available to the model."
                 },
+                "diff": {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "enum": ["unified", "deepdiff", "table", "wdiff"],
+                      "description": "Differ name with default parameters."
+                    },
+                    { "$ref": "#/definitions/textDiffer" }
+                  ],
+                  "description": "The differ generating the diff that follows the summary: a differ name, or an object with its 'name' and sub-directives (any differ except 'ai_google' and 'image').",
+                  "default": "unified"
+                },
                 "unified": {
                   "type": "object",
                   "properties": {
@@ -496,90 +491,9 @@
                     "range_info": { "type": "boolean", "default": true }
                   },
                   "additionalProperties": false,
-                  "description": "Nested unified differ settings for prompt generation."
-                }
-              },
-              "required": ["name"],
-              "additionalProperties": false
-            },
-            {
-              "properties": {
-                "name": { "type": "string", "const": "command" },
-                "command": {
-                  "type": "string",
-                  "description": "Command to execute for diffing."
-                },
-                "is_html": {
-                  "type": "boolean",
-                  "description": "If true, the command output is HTML.",
-                  "default": false
-                },
-                "context_lines": {
-                  "type": "integer",
-                  "description": "Number of context lines around changes.",
-                  "default": 3
-                }
-              },
-              "required": ["name", "command"],
-              "additionalProperties": false
-            },
-            {
-              "properties": {
-                "command": {
-                  "type": "string",
-                  "description": "Command to execute for diffing (the 'command' differ, whose name may be omitted when this is its only sub-directive)."
-                }
-              },
-              "required": ["command"],
-              "additionalProperties": false
-            },
-            {
-              "properties": {
-                "name": { "type": "string", "const": "deepdiff" },
-                "data_type": {
-                  "type": "string",
-                  "enum": ["json", "yaml", "xml"],
-                  "description": "Data type to parse (derived from media type if not set)."
-                },
-                "ignore_order": {
-                  "type": "boolean",
-                  "description": "Ignore order of elements.",
-                  "default": false
-                },
-                "ignore_string_case": {
-                  "type": "boolean",
-                  "description": "Ignore string case differences.",
-                  "default": false
-                },
-                "significant_digits": {
-                  "type": "integer",
-                  "description": "Number of significant digits for numeric comparison."
-                },
-                "compact": {
-                  "type": "boolean",
-                  "description": "Use compact output format.",
-                  "default": false
-                },
-                "cutoff_distance_for_pairs": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 1,
-                  "description": "With ignore_order, two changed items are paired and compared in depth only if their deep distance is below this value; otherwise they are reported as one item removed plus one added (deepdiff library's own default is 0.3).",
-                  "default": 1.0
-                },
-                "cutoff_intersection_for_pairs": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 1,
-                  "description": "With ignore_order, pairing of changed items is attempted only if the intersection distance of the two iterables is below this value; otherwise each changed item is reported in its entirety (deepdiff library's own default is 0.7).",
-                  "default": 1.0
-                },
-                "threshold_to_diff_deeper": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 1,
-                  "description": "The fraction of keys two dictionaries must share for them to be compared key by key instead of being reported as one whole new value (deepdiff library's own default is 0.33).",
-                  "default": 0
+                  "description": "Deprecated: use 'diff' (e.g. 'diff: {name: unified, context_lines: 5}').",
+                  "deprecated": true,
+                  "deprecationMessage": "Use 'diff: {name: unified, ...}' instead of 'unified: {...}'."
                 }
               },
               "required": ["name"],
@@ -659,15 +573,6 @@
                         "tools": {
                           "type": "array",
                           "description": "Tools available to the model."
-                        },
-                        "unified": {
-                          "type": "object",
-                          "properties": {
-                            "context_lines": { "type": "integer", "default": 3 },
-                            "range_info": { "type": "boolean", "default": true }
-                          },
-                          "additionalProperties": false,
-                          "description": "Nested unified differ settings for prompt generation."
                         }
                       },
                       "additionalProperties": false
@@ -679,35 +584,7 @@
               "required": ["name"],
               "additionalProperties": false
             },
-            {
-              "properties": {
-                "name": { "type": "string", "const": "table" },
-                "tabsize": {
-                  "type": "integer",
-                  "description": "Tab stop size.",
-                  "default": 8
-                }
-              },
-              "required": ["name"],
-              "additionalProperties": false
-            },
-            {
-              "properties": {
-                "name": { "type": "string", "const": "wdiff" },
-                "context_lines": {
-                  "type": "integer",
-                  "description": "Number of context lines around changes.",
-                  "default": 3
-                },
-                "range_info": {
-                  "type": "boolean",
-                  "description": "Include range information.",
-                  "default": true
-                }
-              },
-              "required": ["name"],
-              "additionalProperties": false
-            }
+            { "$ref": "#/definitions/textDiffer" }
           ]
         }
       ],
@@ -788,6 +665,146 @@
   },
   "additionalProperties": false,
   "definitions": {
+    "textDiffer": {
+      "type": "object",
+      "description": "A differ, other than 'ai_google' or 'image', with its sub-directives.",
+      "oneOf": [
+        {
+          "properties": {
+            "name": { "type": "string", "const": "unified" },
+            "context_lines": {
+              "type": "integer",
+              "description": "Number of context lines around changes.",
+              "default": 3
+            },
+            "range_info": {
+              "type": "boolean",
+              "description": "Include range information (@@ lines).",
+              "default": true
+            }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "name": { "type": "string", "const": "command" },
+            "command": {
+              "type": "string",
+              "description": "Command to execute for diffing."
+            },
+            "is_html": {
+              "type": "boolean",
+              "description": "If true, the command output is HTML.",
+              "default": false
+            },
+            "context_lines": {
+              "type": "integer",
+              "description": "Number of context lines around changes.",
+              "default": 3
+            }
+          },
+          "required": ["name", "command"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "Command to execute for diffing (the 'command' differ, whose name may be omitted when this is its only sub-directive)."
+            }
+          },
+          "required": ["command"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "name": { "type": "string", "const": "deepdiff" },
+            "data_type": {
+              "type": "string",
+              "enum": ["json", "yaml", "xml"],
+              "description": "Data type to parse (derived from media type if not set)."
+            },
+            "ignore_order": {
+              "type": "boolean",
+              "description": "Ignore order of elements.",
+              "default": false
+            },
+            "ignore_string_case": {
+              "type": "boolean",
+              "description": "Ignore string case differences.",
+              "default": false
+            },
+            "significant_digits": {
+              "type": "integer",
+              "description": "Number of significant digits for numeric comparison."
+            },
+            "compact": {
+              "type": "boolean",
+              "description": "Use compact output format.",
+              "default": false
+            },
+            "cutoff_distance_for_pairs": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "With ignore_order, two changed items are paired and compared in depth only if their deep distance is below this value; otherwise they are reported as one item removed plus one added (deepdiff library's own default is 0.3).",
+              "default": 1.0
+            },
+            "cutoff_intersection_for_pairs": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "With ignore_order, pairing of changed items is attempted only if the intersection distance of the two iterables is below this value; otherwise each changed item is reported in its entirety (deepdiff library's own default is 0.7).",
+              "default": 1.0
+            },
+            "threshold_to_diff_deeper": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "The fraction of keys two dictionaries must share for them to be compared key by key instead of being reported as one whole new value (deepdiff library's own default is 0.33).",
+              "default": 0
+            }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "name": { "type": "string", "const": "table" },
+            "tabsize": {
+              "type": "integer",
+              "description": "Tab stop size.",
+              "default": 8
+            }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "name": { "type": "string", "const": "wdiff" },
+            "context_lines": {
+              "type": "integer",
+              "description": "Number of context lines around changes.",
+              "default": 3
+            },
+            "range_info": {
+              "type": "boolean",
+              "description": "Include range information.",
+              "default": true
+            },
+            "color": {
+              "type": "boolean",
+              "description": "Colorize the text report with ANSI escape codes; if false, mark removed words [-like this-] and added ones {+like this+}.",
+              "default": true
+            }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        }
+      ]
+    },
     "filterList": {
       "type": "array",
       "items": { "$ref": "#/definitions/filterItem" },

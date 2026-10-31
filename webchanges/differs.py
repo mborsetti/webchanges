@@ -99,6 +99,8 @@ class AiGoogleDirectives(TypedDict, total=False):
     top_k: float | None
     thinking_budget: float | None
     tools: list[Any]
+    diff: str | dict[str, Any] | None
+    unified: dict[str, Any] | None  # deprecated: use diff
 
 
 ReportKind = Literal['plain', 'markdown', 'html']
@@ -416,7 +418,25 @@ class DifferBase(metaclass=TrackSubClasses):
                     f'{", ".join(unknown_keys)} (supported: {", ".join(sorted(allowed_keys))}).'
                 )
 
-        return differ_kind, directives
+        return differ_kind, differcls.normalize_directives(directives, job_index_number, differ_defaults)
+
+    @classmethod
+    def normalize_directives(
+        cls,
+        directives: dict[str, Any],
+        job_index_number: int | None = None,
+        differ_defaults: _ConfigDifferDefaults | None = None,
+    ) -> dict[str, Any]:
+        """Further normalize the differ's directives, which are already validated and inclusive of its defaults.
+
+        Override in a differ whose directives need it, e.g. to apply the configuration defaults of a nested differ.
+
+        :param directives: The differ directives.
+        :param job_index_number: The job index number.
+        :param differ_defaults: The differ defaults from the configuration.
+        :returns: The normalized directives.
+        """
+        return directives
 
     @classmethod
     def process(
@@ -1954,9 +1974,13 @@ class AIGoogleDiffer(DifferBase):
         'top_p': "the model's TopP parameter (default: None, i.e. model's default",
         'top_k': "the model's TopK parameter (default: None, i.e. model's default",
         'tools': "data passed on to the API's 'tools' field (default: None)",
-        'unified': 'directives passed to the unified differ (default: None)',
+        'diff': 'the differ (a name, or a dict with name and sub-directives) generating the diff following the summary',
+        'unified': "deprecated: use 'diff'",
     }
     __default_directive__ = 'model'
+
+    # The differs that can generate the diff following the summary (ai_google itself would recurse; image needs images)
+    DIFF_KINDS = ('unified', 'wdiff', 'table', 'deepdiff', 'command')
 
     @staticmethod
     def _send_to_model(
@@ -2122,6 +2146,65 @@ class AIGoogleDiffer(DifferBase):
                     summary += '\n\nNot retried automatically as the response carried no usable retry delay.'
 
         return summary, model_version
+
+    @classmethod
+    def diff_differ(
+        cls,
+        directives: AiGoogleDirectives | dict[str, Any],
+        job_index_number: int | None = None,
+        differ_defaults: _ConfigDifferDefaults | None = None,
+    ) -> tuple[str, dict[str, Any]]:
+        """Resolve the ``diff`` sub-directive (or the deprecated ``unified`` one) into the differ following the summary.
+
+        :param directives: The directives of this differ.
+        :param job_index_number: The job index number.
+        :param differ_defaults: The differ defaults from the configuration, applied to the differ following the summary.
+        :returns: The kind of that differ and its directives.
+        :raises SettingError: If the differ is unknown, cannot be used here, or is given unsupported sub-directives.
+        """
+        diff_spec = directives.get('diff')
+        if 'unified' in directives:
+            warnings.warn(
+                f"Job {job_index_number}: Differ '{cls.__kind__}' sub-directive 'unified' is deprecated; replace "
+                f"'unified: {{...}}' with 'diff: {{name: unified, ...}}'",
+                DeprecationWarning,
+                stacklevel=1,
+            )
+            if diff_spec is None:
+                diff_spec = {'name': 'unified', **(directives['unified'] or {})}
+        if isinstance(diff_spec, str):
+            diff_spec = {'name': diff_spec}
+        diff_kind, diff_directives = DifferBase.normalize_differ(diff_spec, job_index_number, differ_defaults)
+        if diff_kind not in cls.DIFF_KINDS:
+            raise SettingError(
+                f"Job {job_index_number}: Differ '{cls.__kind__}' sub-directive 'diff' cannot be '{diff_kind}' "
+                f'(supported: {", ".join(cls.DIFF_KINDS)}).'
+            )
+        return diff_kind, diff_directives
+
+    @classmethod
+    def normalize_directives(
+        cls,
+        directives: dict[str, Any],
+        job_index_number: int | None = None,
+        differ_defaults: _ConfigDifferDefaults | None = None,
+    ) -> dict[str, Any]:
+        """Resolve the differ following the summary, inclusive of its configuration defaults, into ``diff``.
+
+        Left as is if neither the job nor the configuration defaults set anything for it, so that the report's footer
+        listing the directives is not cluttered with the default.
+
+        :param directives: The differ directives.
+        :param job_index_number: The job index number.
+        :param differ_defaults: The differ defaults from the configuration.
+        :returns: The directives, with ``diff`` (if any) as a dict with the differ's ``name`` and replacing ``unified``.
+        """
+        if 'diff' not in directives and 'unified' not in directives and not (differ_defaults or {}).get('unified'):
+            return directives
+        diff_kind, diff_directives = cls.diff_differ(directives, job_index_number, differ_defaults)
+        directives = {key: value for key, value in directives.items() if key != 'unified'}
+        directives['diff'] = {'name': diff_kind, **diff_directives}
+        return directives
 
     def differ(
         self,
@@ -2312,6 +2395,8 @@ class AIGoogleDiffer(DifferBase):
 
         system_instructions = directives.get('system_instructions', default_system_instructions)
         prompt = directives.get('prompt', default_prompt).replace('\\n', '\n')
+        # before calling the model, so that errors cost nothing; normally already resolved by normalize_directives()
+        diff_kind, diff_directives = self.diff_differ(directives, self.job.index_number)
         summary, model_version = get_ai_summary(prompt, system_instructions)
         if not summary:
             self.state.verb = 'changed,no_report'
@@ -2333,19 +2418,16 @@ class AIGoogleDiffer(DifferBase):
             if model_version or directives_text
             else ''
         )
-        temp_unfiltered_diff: dict[ReportKind, str] = {}
-        for rep_kind in ('plain', 'html'):  # markdown is same as text
-            unified_report = DifferBase.process(
-                'unified',
-                directives.get('unified') or {},
-                self.state,
-                rep_kind,
-                tz,
-                temp_unfiltered_diff,
-            )
+        # each differ returns at least the report kind requested, and can reuse what it generated for another kind
+        diff_report: dict[ReportKind, str] = {}
+        for rep_kind in ('plain', 'markdown', 'html'):
+            if rep_kind not in diff_report:
+                diff_report.update(
+                    DifferBase.process(diff_kind, diff_directives, self.state, rep_kind, tz, diff_report)
+                )
         return {
-            'plain': (f'{summary}\n\n{unified_report["plain"]}' + (f'\n------------\n{footer}' if footer else '')),
-            'markdown': (f'{summary}\n\n{unified_report["markdown"]}' + (f'\n* * *\n{footer}' if footer else '')),
+            'plain': (f'{summary}\n\n{diff_report["plain"]}' + (f'\n------------\n{footer}' if footer else '')),
+            'markdown': (f'{summary}\n\n{diff_report["markdown"]}' + (f'\n* * *\n{footer}' if footer else '')),
             'html': '\n'.join(
                 [
                     mark_to_html(summary, extras={'tables': None, **(self.job.markdown_extras or {})})
@@ -2353,7 +2435,7 @@ class AIGoogleDiffer(DifferBase):
                     .replace('</h2>', '</h3>'),
                     '<br>',
                     '<br>',
-                    unified_report['html'],
+                    diff_report['html'],
                 ]
                 + (['-----<br>', f'<i><small>{footer}</small></i>'] if footer else [])
             ),
@@ -2423,17 +2505,21 @@ class WdiffDiffer(DifferBase):
             return self.tokenize_html(data)
         return self.tokenize_plain(data)
 
-    @staticmethod
-    def keep_context_lines(diff_text: str, diff_html: str, contextlines: int, range_info: bool) -> tuple[str, str]:
+    @classmethod
+    def keep_context_lines(cls, diff_text: str, diff_html: str, contextlines: int, range_info: bool) -> tuple[str, str]:
         """Keep only the lines with changes and the context lines around them.
 
-        :param diff_text: The text diff, whose changes are marked by ANSI color codes.
-        :param diff_html: The HTML diff, line by line the same as the text one.
+        :param diff_text: The text diff.
+        :param diff_html: The HTML diff, line by line the same as the text one, whose changes are marked by spans
+           styled with css_added_style or css_deltd_style (the text diff's markers depend on the 'color' directive).
         :param contextlines: The number of context lines around each changed line.
         :param range_info: Whether to mark each range of lines skipped with an ``@@ first...last @@`` line.
         :returns: The text and HTML diffs.
         """
-        lines_with_changes = [i for i, line in enumerate(diff_text.splitlines()) if '\033[9' in line]
+        markers = (f'<span style="{cls.css_added_style}">', f'<span style="{cls.css_deltd_style}">')
+        lines_with_changes = [
+            i for i, line in enumerate(diff_html.splitlines()) if markers[0] in line or markers[1] in line
+        ]
         if contextlines:
             lines_to_keep: set[int] = set()
             for i in lines_with_changes:
@@ -2495,9 +2581,9 @@ class WdiffDiffer(DifferBase):
             text_add = '{+'
             text_add_end = '+}'
 
-        html_rem = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
+        html_rem = f'<span style="{self.css_deltd_style}">'  # these markers are relied upon by keep_context_lines()
         html_rem_end = '</span> '
-        html_add = '<span style="background-color:#d1ffd1;color:#082b08;">'
+        html_add = f'<span style="{self.css_added_style}">'
         html_add_end = '</span>'
 
         head_text = '\n'.join(

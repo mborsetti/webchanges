@@ -12,11 +12,12 @@ import contextlib
 import logging
 import os
 import random
+import re
 import string
 import sys
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 from zoneinfo import ZoneInfo
 
 import httpx2
@@ -1209,6 +1210,120 @@ def test_ai_google_no_key(job_state: JobState) -> None:
             os.environ['GEMINI_API_KEY'] = existing_key
 
 
+@pytest.fixture
+def ai_google_no_key_state(job_state: JobState, monkeypatch: pytest.MonkeyPatch) -> JobState:
+    """Get a JobState with changed data for ai_google, whose missing API key keeps the model from being called."""
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('GOOGLE_AI_API_KEY', raising=False)
+    job_state.old_data = 'a\n'
+    job_state.new_data = 'b\n'
+    return job_state
+
+
+def test_ai_google_diff_dict(ai_google_no_key_state: JobState) -> None:
+    """Test ai_google with the diff following the summary set by a differ name and its sub-directives."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google', 'diff': {'name': 'wdiff', 'color': False}}
+    assert '\n[-a-] {+b+}\n' in job_state.get_diff(tz=test_tz)
+    assert '<span style="background-color:#d1ffd1;color:#082b08;">b</span>' in job_state.get_diff('html', tz=test_tz)
+
+
+def test_ai_google_diff_name(ai_google_no_key_state: JobState) -> None:
+    """Test ai_google with the diff following the summary set by a differ name only."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google', 'diff': 'table'}
+    assert '<table' in job_state.get_diff('html', tz=test_tz)
+    assert '@@ -1 +1 @@' not in job_state.get_diff(tz=test_tz)
+
+
+def test_ai_google_diff_default_unified(ai_google_no_key_state: JobState) -> None:
+    """Test ai_google with the default unified diff following the summary, in every report kind."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google'}
+    assert job_state.get_diff(tz=test_tz).endswith('\n@@ -1 +1 @@\n-a\n+b')  # no footer without model or directives
+    assert job_state.get_diff('markdown', tz=test_tz).endswith('\n@@ -1 +1 @@\n-a\n+b')
+    assert '<table' in job_state.get_diff('html', tz=test_tz)
+
+
+def test_ai_google_unified_deprecated(ai_google_no_key_state: JobState) -> None:
+    """Test that ai_google's sub-directive 'unified' still works, with a deprecation warning."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google', 'unified': {'range_info': False}}
+    with pytest.warns(DeprecationWarning, match="sub-directive 'unified' is deprecated"):
+        diff = job_state.get_diff(tz=test_tz)
+    assert '\n-a\n+b\n' in diff
+    assert '@@' not in diff
+
+
+def test_ai_google_unified_deprecated_diff_wins(ai_google_no_key_state: JobState) -> None:
+    """Test that ai_google's sub-directive 'diff' takes precedence over the deprecated 'unified'."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google', 'unified': {}, 'diff': {'name': 'wdiff', 'color': False}}
+    with pytest.warns(DeprecationWarning):
+        assert '\n[-a-] {+b+}\n' in job_state.get_diff(tz=test_tz)
+
+
+@pytest.mark.parametrize(
+    ('diff', 'message'),
+    [
+        ('image', "Differ 'ai_google' sub-directive 'diff' cannot be 'image'"),
+        ('ai_google', "Differ 'ai_google' sub-directive 'diff' cannot be 'ai_google'"),
+        ('nodiffer', 'No differ named nodiffer.'),
+        ({'name': 'wdiff', 'nodirective': True}, 'Differ wdiff does not support sub-directive(s) nodirective'),
+    ],
+)
+def test_ai_google_diff_invalid(ai_google_no_key_state: JobState, diff: str | dict[str, Any], message: str) -> None:
+    """Test ai_google with a diff following the summary that cannot be generated: a settings error, like any other."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google', 'diff': diff}
+    with pytest.raises(SettingError, match=re.escape(message)):
+        job_state.get_diff(tz=test_tz)
+
+
+def test_ai_google_diff_invalid_not_normalized(ai_google_no_key_state: JobState) -> None:
+    """Test that ai_google rejects a diff following the summary that cannot be generated even if called directly."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google', 'diff': 'image'}
+    diff = DifferBase.process('ai_google', {'diff': 'image'}, job_state, 'plain', test_tz)
+    assert "Differ 'ai_google' sub-directive 'diff' cannot be 'image'" in diff['plain']
+    assert isinstance(job_state.exception, SettingError)
+
+
+def test_ai_google_diff_differ_defaults(ai_google_no_key_state: JobState) -> None:
+    """Test that the configuration's differ_defaults apply to the differ following the summary."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google', 'diff': 'wdiff'}
+    diff = job_state.get_diff(tz=test_tz, differ_defaults={'wdiff': {'color': False}})
+    assert '\n[-a-] {+b+}\n' in diff
+    assert "diff={'name': 'wdiff', 'color': False}" in diff  # listed in the footer
+
+
+def test_ai_google_diff_differ_defaults_job_wins(ai_google_no_key_state: JobState) -> None:
+    """Test that the sub-directives of the differ following the summary take precedence over differ_defaults."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google', 'diff': {'name': 'wdiff', 'color': True}}
+    diff = job_state.get_diff(tz=test_tz, differ_defaults={'wdiff': {'color': False}})
+    assert '[-a-]' not in diff
+    assert '\033[91ma\033[0m' in diff
+
+
+def test_ai_google_diff_differ_defaults_default_unified(ai_google_no_key_state: JobState) -> None:
+    """Test that differ_defaults for unified apply to the default diff following the summary."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google'}
+    diff = job_state.get_diff(tz=test_tz, differ_defaults={'unified': {'range_info': False}})
+    assert '\n-a\n+b\n------------\n' in diff
+    assert '@@' not in diff
+
+
+def test_ai_google_no_diff_not_in_footer(ai_google_no_key_state: JobState) -> None:
+    """Test that the default diff following the summary is not listed in the footer."""
+    job_state = ai_google_no_key_state
+    job_state.job.differ = {'name': 'ai_google', 'timeout': 1}
+    diff = job_state.get_diff(tz=test_tz, differ_defaults={'unified': {}})
+    assert diff.endswith('(differ directive(s): timeout=1).')
+
+
 @py_no_github
 def test_ai_google_bad_api_key(job_state: JobState) -> None:
     """Test ai_google but with unchanged data as not to trigger API charges."""
@@ -1588,6 +1703,17 @@ def test_wdiff(
 
     diff = job_state.get_diff(report_kind='html')
     assert diff.splitlines()[2:] == expected_html
+
+
+@pytest.mark.parametrize(
+    ('color', 'changed_line'), [(True, 'line \033[91m5\033[0m \033[92mfive\033[0m'), (False, 'line [-5-] {+five+}')]
+)
+def test_wdiff_context_lines(color: bool, changed_line: str, job_state: JobState) -> None:
+    """Test that wdiff keeps the changed line and its context lines, with or without color."""
+    job_state.old_data = ''.join(f'line {i}\n' for i in range(10))
+    job_state.new_data = job_state.old_data.replace('line 5', 'line five')
+    job_state.job.differ = {'name': 'wdiff', 'color': color, 'context_lines': 1}
+    assert job_state.get_diff().splitlines()[2:] == ['@@ 1...4 @@', 'line 4', changed_line, 'line 6', '@@ 8...10 @@']
 
 
 # ---------------------------------------------------------------------------------------------------------------------
