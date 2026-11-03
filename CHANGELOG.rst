@@ -25,8 +25,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
 
 .. Categories used (in order):
    ⚠ Breaking Changes, for changes that break existing functionality. [minor revision or, if to API, major revision]
-   ⚠ Upgrade Notes, for what users will notice once after upgrading, or that changes what they see, without breaking
-     anything (e.g. a one-time change reported); each says what happens and what to do, if anything. [no revision]
+   ⚠ Upgrade Notes, for what users will notice once after upgrading. [no revision]
    Added, for new features. [triggers a minor revision]
    Changed, for changes in existing functionality. [triggers a minor revision or, if to API, major revision]
    Deprecated, for soon-to-be removed features.
@@ -43,106 +42,88 @@ Unreleased
 
 ⚠ Upgrade Notes
 ```````````````
-* ``url`` jobs with ``http_client: curl_cffi`` now send the impersonated browser's ``User-Agent`` header instead of
-  :program:`webchanges`' own (see Fixed below). A site that serves different content to it will be reported as changed
-  once, on the first run after upgrading.
-* ``wdiff`` differ: Changes of whitespace only (e.g. spaces, blank lines or line breaks) are no longer reported (see
-  Changed below).
-* HTML reports: Markdown tables are now rendered as HTML tables (see Changed below); to keep the previous rendering,
-  set ``markdown_tables: false`` in the job (or in ``job_defaults`` in the configuration file).
+* HTML reports: Markdown tables are now rendered as HTML tables; set ``markdown_tables: false`` to keep the previous
+  rendering.
+* ``html2text`` filter: Jobs with a misspelled sub-directive (e.g. ``pad_table``) or a method given as a sub-directive
+  (e.g. ``strip_tags: true``) now fail with an error instead of silently ignoring it; correct them as it says.
+* HTTPS: With ``httpx2``, the default HTTP client, TLS certificates are now verified against the operating system's
+  certificate store instead of ``certifi``'s; if a job now fails with a certificate error, set ``SSL_CERT_FILE``.
+* ``wdiff`` differ: Changes of whitespace only (spaces, blank lines, line breaks) are no longer reported.
+* ``url`` jobs with ``http_client: curl_cffi`` now send the impersonated browser's ``User-Agent``; a site serving
+  different content to it will be reported as changed once, on the first run after upgrading.
 
 Added
 `````
-* A tested sample Dockerfile (``docker/Dockerfile``, with a ``compose.yaml`` file) that you can adapt to build a
-  container from the source code. See `Sample Dockerfile
-  <https://webchanges.readthedocs.io/en/stable/advanced.html#docker-sample>`__.
-* ``ai_google`` differ: New ``diff`` sub-directive that sets the differ generating the diff that follows the summary
-  (e.g. ``diff: wdiff`` for a word-by-word diff), as a name or with sub-directives (e.g. ``diff: {name: unified,
-  context_lines: 5}``); any differ except ``ai_google`` and ``image`` can be used, and its ``differ_defaults`` in the
-  configuration file apply. Defaults to ``unified``, as before. See :ref:`here <ai_google_diff>`.
+* A tested sample Dockerfile (``docker/Dockerfile``, with a ``compose.yaml``) to build a container from the source
+  code. See `Sample Dockerfile <https://webchanges.readthedocs.io/en/stable/advanced.html#docker-sample>`__.
+* ``ai_google`` differ: New ``diff`` sub-directive choosing the differ of the diff that follows the summary (e.g.
+  ``diff: wdiff``), by name or with sub-directives; defaults to ``unified``. See :ref:`here <ai_google_diff>`.
 
 Changed
 ```````
-* To minimize supply chain and security risks, the default HTTP client is now
-  `httpx2 <https://github.com/pydantic/httpx2>`__, as ``httpx`` has not seen a stable release since late 2024. If it
-  is not installed, on a temporary basis ``httpx`` is used if found (and, failing that, ``requests`` or ``curl_cffi``
-  as before). The ``http_client`` job directive value is now ``httpx2``; ``httpx`` remains accepted as an alias, so
-  existing jobs files keep working. Unlike ``httpx``, ``httpx2`` verifies TLS certificates against the operating
-  system's certificate store (on Linux, OpenSSL's) instead of the bundle of the ``certifi`` package; the
-  ``SSL_CERT_FILE`` and ``SSL_CERT_DIR`` environment variables still override it.
-* The ``xmpp`` reporter works again: it now uses the maintained `slixmpp <https://pypi.org/project/slixmpp/>`__
-  library instead of ``aioxmpp``, which is dead and could no longer be successfully installed. The connection is now
-  made once for all the messages of a report rather than once per message, and gives up after 60 seconds if no session
-  can be established.
-* Errors in the configuration or jobs file found at startup, and wrong settings of a filter, differ or reporter, are
-  no longer buried in a Python traceback.
-* HTML reports: images in Markdown content are now at most 600 pixels wide (instead of the full width available).
-* HTML reports: the rows of Markdown tables (e.g. from the ``html2text`` filter) are now rendered as HTML tables
-  instead of as lines of text with ``|`` separators, both in the full content and in the diffs of the ``unified`` and
-  ``wdiff`` differs, where each row keeps the colors of an added or deleted line or has its changed words marked
-  within its cells. The new ``markdown_tables`` job directive set to false keeps the previous rendering. See
-  :ref:`here <markdown_tables>`.
-* ``wdiff`` differ: Rewritten along the lines of ``git diff --word-diff``. The data is now compared line by line first,
-  then word by word within each block of changed lines, making it much faster with large data (a 75 KB page ran 550
-  times faster) and preventing words from being matched with common ones on distant lines. Whitespace is no longer
-  compared, so a change of whitespace only is not reported (this also fixes blank lines added or removed being shown
-  as an unmarked extra blank line, or not at all). Punctuation characters are now words of their own (e.g.
-  ``2026[-.-] {+;+}``), as are Han and kana characters (previously a whole line of Chinese or Japanese text was one
-  word), and a rewritten phrase is reported as one change rather than as a patchwork of changes around its common
-  words. With HTML data, the HTML report now has the markup of the new data with only the text marked, instead of
-  change markers around tags making it invalid. See :ref:`here <wdiff_diff>`.
+* The default HTTP client is now `httpx2 <https://github.com/pydantic/httpx2>`__, to reduce supply chain and security
+  risks (``httpx`` has had no stable release since late 2024); without it, ``httpx`` is used, then ``requests`` or
+  ``curl_cffi`` as before. ``http_client: httpx2`` is the new directive value, ``httpx`` remaining an alias. TLS
+  certificates are verified against the operating system's store (OpenSSL's on Linux) instead of ``certifi``'s;
+  ``SSL_CERT_FILE`` and ``SSL_CERT_DIR`` still override it.
+* Errors in the configuration or jobs file, and wrong settings of a filter, differ or reporter, are reported without a
+  Python traceback.
+* HTML reports: Markdown tables (e.g. from the ``html2text`` filter) are rendered as HTML tables instead of as
+  ``|``-separated text, also in the diffs of the ``unified`` and ``wdiff`` differs. See :ref:`here <markdown_tables>`.
+* ``wdiff`` differ: Compares lines first, then words within the changed lines, as ``git diff --word-diff`` does: 550
+  times faster on a 75 KB page, and words are no longer matched across distant lines. Whitespace is no longer compared,
+  punctuation and Han and kana characters are words of their own, a rewritten phrase is reported as one change, and
+  the HTML report of HTML data stays valid HTML. See :ref:`here <wdiff_diff>`.
+* HTML reports: Images in Markdown content are at most 600 pixels wide.
+* ``xmpp`` reporter: Works again, using the maintained `slixmpp <https://pypi.org/project/slixmpp/>`__ instead of the
+  dead ``aioxmpp``; it connects once per report instead of once per message, and gives up after 60 seconds without a
+  session.
 
 Deprecated
 ``````````
-* ``ai_google`` differ: The ``unified`` sub-directive is deprecated in favor of ``diff``; replace ``unified: {...}``
-  with ``diff: {name: unified, ...}``. It still works but prints a deprecation warning.
+* ``ai_google`` differ: The ``unified`` sub-directive, replaced by ``diff`` (``unified: {...}`` becomes ``diff: {name:
+  unified, ...}``); it still works, with a warning.
 
 Fixed
 `````
-* The JSON schemas that :program:`webchanges` copies next to ``config.yaml`` and ``jobs.yaml`` (``config.schema.json``
-  and ``jobs.schema.json``, used by editors for autocompletion and validation) were never copied when installed with
-  ``pip`` or ``uv``, as the package lacked the files used to detect whether they need updating.
-* ``url`` jobs with ``http_client: curl_cffi`` defaulted to sending :program:`webchanges`' own ``User-Agent`` header
-  instead of the impersonated browser's, contradicting the browser TLS fingerprint. A ``User-Agent`` set in the job's
-  ``headers`` is still sent.
+* ``html2text`` filter: Misspelled sub-directives (e.g. ``pad_table``) were silently ignored, and a method given as a
+  sub-directive (e.g. ``strip_tags: true``) ran the default method; both now raise an error. The bundled JSON Schema
+  flags them too, offers all the options of the ``html2text`` method, and no longer offers the unsupported
+  ``decode_errors``.
+* The JSON schemas copied next to ``config.yaml`` and ``jobs.yaml`` for editors' autocompletion and validation were
+  never copied when installed with ``pip`` or ``uv``.
+* ``url`` jobs with ``http_client: curl_cffi`` sent :program:`webchanges`' own ``User-Agent`` instead of the
+  impersonated browser's, contradicting its TLS fingerprint (a ``User-Agent`` in the job's ``headers`` still prevails).
+* ``wdiff`` differ: HTML reports of Markdown data showed list items as literal ``*`` without their indentation, and
+  headings and ``* * *`` as full-size headings and horizontal rules; they are now rendered line by line, as with the
+  ``unified`` differ.
+* ``wdiff`` differ: With ``color: false``, text reports of data longer than ``context_lines`` showed only a ``@@``
+  line, and no changes.
 * ``url`` jobs with ``use_browser: true``, ``initialization_url`` and ``initialization_js`` failed when
-  ``wait_for_url`` was a dict (of Playwright options), and an invalid ``wait_for_url`` raised an ``AttributeError``
-  instead of the intended error message.
-* ``keep_lines_containing`` and  ``delete_lines_containing`` filters: Improved error messages for invalid regular
+  ``wait_for_url`` was a dict of Playwright options, and an invalid ``wait_for_url`` raised an ``AttributeError``
+  instead of a clear error.
+* ``github_issue`` reporter: A numeric ``milestone``, as in the documentation's example, failed the validation of the
+  configuration file. See :ref:`here <github_issue>`.
+* Bundled JSON Schemas: The configuration file's rejected files missing directives (e.g. written by an earlier
+  version), top-level remarks (keys starting with ``_``) and the deprecated ``empty-diff: true``, but accepted
+  misspelled sub-directives of sections and reporters; the jobs file's rejected a ``command`` differ without ``name``
+  and the ``color`` sub-directive of the ``wdiff`` differ.
+* ``wdiff`` differ: In HTML reports, the ``@@`` lines marking skipped lines are now styled as the ``unified`` differ's.
+* ``--features``: The ``deepdiff`` and ``wdiff`` differs had no description ("None"), and the descriptions of the
+  ``beautify`` and ``xmltoyaml`` filters were cut mid-sentence.
+* ``keep_lines_containing`` and ``delete_lines_containing`` filters: Clearer error messages for an invalid regular
   expression in ``re``.
-* ``html2text`` filter: Sub-directives are now checked and misspelled ones such as ``pad_table``, which were silently
-  ignored, now raise an error; so does a method given as a sub-directive (e.g. ``strip_tags: true`` instead of
-  ``method: strip_tags``), which ran the default method instead. The bundled JSON Schema now flags them in editors too,
-  offers all the options of the ``html2text`` method, and no longer offers the unsupported ``decode_errors``.
-* ``github_issue`` reporter: a ``milestone`` given as a number, as in the documentation's example, failed the
-  validation of the configuration file; it can now be a number or a string. See :ref:`here <github_issue>`.
-* The bundled JSON Schema of the configuration file flagged as invalid a file missing directives (e.g. one written by
-  an earlier version, which :program:`webchanges` completes with default values), remarks (keys starting with ``_``)
-  at its top level, and the deprecated ``empty-diff: true``, while accepting misspelled sub-directives of its sections
-  and reporters. The one of the jobs file flagged a ``command`` differ given without its ``name``, which
-  :program:`webchanges` accepts, and the ``color`` sub-directive of the ``wdiff`` differ.
-* ``ai_google`` differ: Improved retry error messages.
-* ``wdiff`` differ: With ``color: false``, text reports of data with more lines than ``context_lines`` showed no
-  changes at all, only a ``@@`` line for the whole data.
-* ``wdiff`` differ: HTML reports of Markdown data (e.g. from the ``html2text`` filter) are now rendered line by line,
-  as with the ``unified`` differ. List items were shown as literal ``*`` with their indentation lost, as were indented
-  lines; headings were rendered at full size, and ``* * *`` as a horizontal rule (which separates jobs in reports).
-* ``wdiff`` differ: In HTML reports, the ``@@`` lines marking skipped unchanged lines are now in a monospace font on a
-  shaded background, as with the ``unified`` differ, instead of looking like part of the content.
-* ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
-  descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.
+* ``ai_google`` differ: Clearer retry error messages.
 
 Internals impacting hooks.py
 ````````````````````````````
-* Following the switch to ``httpx2`` (see above), a ``hooks.py`` that imports ``httpx`` must be upgraded to import
-  ``httpx2`` instead (the API is the same, so ``import httpx2`` and renaming ``httpx.`` to ``httpx2.`` suffice).
-  ``httpx2`` and ``httpx`` are separate packages whose classes are unrelated, so mixing them breaks silently.
-* New ``webchanges.util.SettingError`` (a ``ValueError`` subclass): a custom filter, differ or reporter in ``hooks.py``
-  can raise it to report a wrong setting without a traceback (see above). The bundled ones now raise it for their
-  settings errors, so code catching ``TypeError``, ``RuntimeError``, ``re.error`` or ``cssselect.SelectorError`` from
-  them must catch ``ValueError`` (or ``SettingError``) instead.
-* Finding both a legacy and a current ``job_defaults`` key in the configuration (a duplicate) raises ``ValueError``
-  (was ``KeyError``).
+* With the switch to ``httpx2`` (see above), a ``hooks.py`` importing ``httpx`` must import ``httpx2`` instead (same
+  API: rename ``httpx`` to ``httpx2``); the two packages' classes are unrelated, so mixing them breaks silently.
+* New ``webchanges.util.SettingError`` (a ``ValueError`` subclass): a custom filter, differ or reporter can raise it to
+  report a wrong setting without a traceback. The bundled ones now raise it, so code catching ``TypeError``,
+  ``RuntimeError``, ``re.error`` or ``cssselect.SelectorError`` from them must catch ``ValueError`` (or
+  ``SettingError``) instead.
+* A duplicate (legacy and current) ``job_defaults`` key in the configuration raises ``ValueError`` (was ``KeyError``).
 
 Internals
 `````````
