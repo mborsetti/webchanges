@@ -2,7 +2,7 @@
 Changelog
 =========
 
-This changelog mostly follows '`keep a changelog <https://keepachangelog.com/en/1.0.0/>`__'. Release numbering mostly
+This changelog mostly follows '`keep a changelog <https://keepachangelog.com/en/1.1.0/>`__'. Release numbering mostly
 follows the logic of `Semantic Versioning <https://semver.org/spec/v2.0.0.html#semantic-versioning-200>`__
 (``<major>.<minor>.<patch>``) and the syntax of Python's `Packaging
 <https://packaging.python.org/en/latest/discussions/versioning/>`__. Release date is UTC. Major backward incompatible
@@ -25,6 +25,8 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
 
 .. Categories used (in order):
    ⚠ Breaking Changes, for changes that break existing functionality. [minor revision or, if to API, major revision]
+   ⚠ Upgrade Notes, for what users will notice once after upgrading, or that changes what they see, without breaking
+     anything (e.g. a one-time change reported); each says what happens and what to do, if anything. [no revision]
    Added, for new features. [triggers a minor revision]
    Changed, for changes in existing functionality. [triggers a minor revision or, if to API, major revision]
    Deprecated, for soon-to-be removed features.
@@ -38,6 +40,16 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
 Version NEXT
 -------------------
 Unreleased
+
+⚠ Upgrade Notes
+```````````````
+* ``url`` jobs with ``http_client: curl_cffi`` now send the impersonated browser's ``User-Agent`` header instead of
+  :program:`webchanges`' own (see Fixed below). A site that serves different content to it will be reported as changed
+  once, on the first run after upgrading.
+* ``wdiff`` differ: Changes of whitespace only (e.g. spaces, blank lines or line breaks) are no longer reported (see
+  Changed below).
+* HTML reports: Markdown tables are now rendered as HTML tables (see Changed below); to keep the previous rendering,
+  set ``markdown_tables: false`` in the job (or in ``job_defaults`` in the configuration file).
 
 Added
 `````
