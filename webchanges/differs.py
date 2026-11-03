@@ -67,7 +67,7 @@ from webchanges.util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
 
     from webchanges.jobs import JobBase
 
@@ -2494,99 +2494,238 @@ class WdiffDiffer(DifferBase):
         'color': 'colorize text output (default: true)',
     }
 
-    @staticmethod
-    def tokenize_markdown(markdown_string: str) -> list[str]:
-        """Split Markdown into words, keeping links whole."""
-        # Escape spaces and emphasis markers inside brackets to prevent them being split
-        string = re.sub(
-            r'\[(.*?)\]',
-            lambda x: '[' + x.group(1).replace(' ', '</s>').replace('**', '<\\b>').replace('~~', '<\\~>') + ']',
-            markdown_string,
-        )
-        # Use split with capturing group to keep the whitespace and the '**'/'~~' emphasis markers, so that unchanged
-        # markers around a changed word are not reported as part of the change
-        tokens = re.split(r'(\s+|\*\*|~~)', string)
-        return [t.replace('\n', '<\\n>').replace('<\\b>', '**').replace('<\\~>', '~~') for t in tokens if t]
-        # # Split by tags, keeping the tags in the resulting list
-        # string = re.sub(r'\[(.*?)\]', lambda x: '[' + x.group(1).replace(' ', '</s>') + ']', markdown_string)
-        # string = string.replace('\n', ' <\\n> ')
-        # return string.split(' ')
+    # The data is compared first line by line, then word by word within each block of changed lines (as with git diff
+    # --word-diff): this is fast (difflib.SequenceMatcher is quadratic in the worst case, and comparing all the words of
+    # a document at once took seconds) and keeps a word from being matched with a common one on a distant line.
+    # Whitespace separates words and is not compared (as in GNU wdiff and git), so a change of whitespace only (e.g. a
+    # blank line added) is not a change.
+    _CJK = '぀-ヿ㐀-䶿一-鿿豈-﫿'  # Han and kana, which are written without spaces
+    # A word is a Han or kana character; a run of other word characters, including inner '.', ',', ':', '/', '-' and
+    # apostrophes (e.g. 2.50, 1,000, e-mail, don't); or any other character that is not whitespace (e.g. punctuation).
+    _WORD = rf"[{_CJK}]|(?:(?![{_CJK}])\w)+(?:['’.,:/-](?:(?![{_CJK}])\w)+)*|[^\w\s]"
+    WORD_RE = re.compile(_WORD)
+    # In Markdown, links and images, code spans and emphasis markers are words too: a change marker inside a link or
+    # a code span would break it.
+    MARKDOWN_WORD_RE = re.compile(rf'!?\[[^\]\n]*\]\([^)\n]*\)|`[^`\n]+`|\*\*|__|~~|{_WORD}')
+    # In HTML, tags, comments and character references are words too.
+    HTML_WORD_RE = re.compile(rf'<!--.*?-->|<[^<>]+>|&#?\w+;|{_WORD}', re.DOTALL)
+    HTML_TAG_RE = re.compile(r'(<!--.*?-->|<[^<>]+>)', re.DOTALL)
 
-    @staticmethod
-    def tokenize_html(html_string: str) -> list[str]:
-        """Split HTML into tags and words."""
-        # Split by tags, keeping the tags in the resulting list
-        parts = re.split(r'(<[^>]+>)', html_string)
+    def tokenize(self, text: str, mime_type: str) -> tuple[str, list[str], list[str]]:
+        """Split text into words, as Markdown, HTML or plain text according to its media type.
 
-        tokens = []
-        for part in parts:
-            if not part:
-                continue
-            if part.startswith('<') and part.endswith('>'):
-                # Keep tags as a single token
-                tokens.append(part)
-            else:
-                # Split text content by whitespace
-                tokens.extend(re.split(r'(\s+)', part))
-
-        return [t.replace('\n', '<\\n>') for t in tokens if t]
-
-    @staticmethod
-    def tokenize_plain(plain_string: str) -> list[str]:
-        """Split text into words and whitespace."""
-        # Split by tags, keeping the tags in the resulting list
-        tokens = re.split(r'(\s+)', plain_string)
-        return [t.replace('\n', '<\\n>') for t in tokens if t]
-
-    def tokenize(self, data: str, mime_type: str) -> list[str]:
-        """Split data into tokens, as Markdown, HTML or plain text according to its media type."""
+        :param text: The text.
+        :param mime_type: Its media type.
+        :returns: The whitespace before the first word, the words, and the whitespace following each word.
+        """
         if 'markdown' in mime_type:
-            return self.tokenize_markdown(data)
-        if 'html' in mime_type:
-            return self.tokenize_html(data)
-        return self.tokenize_plain(data)
+            word_re = self.MARKDOWN_WORD_RE
+        elif 'html' in mime_type:
+            word_re = self.HTML_WORD_RE
+        else:
+            word_re = self.WORD_RE
+        lead = text
+        words: list[str] = []
+        gaps: list[str] = []
+        end = 0
+        for match in word_re.finditer(text):
+            if words:
+                gaps.append(text[end : match.start()])
+            else:
+                lead = text[: match.start()]
+            words.append(match[0])
+            end = match.end()
+        if words:
+            gaps.append(text[end:])
+        return lead, words, gaps
+
+    @staticmethod
+    def join_words(words: list[str], gaps: list[str], start: int, stop: int) -> str:
+        """Join words[start:stop] with the whitespace between them."""
+        return ''.join(words[k] + (gaps[k] if k < stop - 1 else '') for k in range(start, stop))
+
+    def semantic_cleanup(
+        self, opcodes: Sequence[tuple[str, int, int, int, int]], a: list[str], b: list[str], b_gaps: list[str]
+    ) -> list[tuple[str, int, int, int, int]]:
+        """Merge into the changes around them the runs of unchanged words that are no longer than either of them.
+
+        As diff-match-patch's diff_cleanupSemantic (but counting words), so that a rewritten phrase is reported as
+        one change rather than as a patchwork of changes around its common words (e.g. 'the', 'of'). Runs at the
+        start or end of a line (e.g. the '|' ending a table row) are kept, so that a change does not span lines, and
+        HTML markup is never merged, nor counted in the length of a change.
+
+        :param opcodes: The opcodes of a difflib.SequenceMatcher comparing the words a and b.
+        :param a: The old words.
+        :param b: The new words.
+        :param b_gaps: The whitespace following each new word.
+        :returns: The opcodes.
+        """
+
+        def is_tag(word: str) -> bool:
+            return 'html' in self.state.new_mime_type and bool(self.HTML_TAG_RE.fullmatch(word))
+
+        def length(op: tuple[str, int, int, int, int]) -> int:
+            return max(sum(not is_tag(w) for w in a[op[1] : op[2]]), sum(not is_tag(w) for w in b[op[3] : op[4]]))
+
+        ops = list(opcodes)
+        k = 1
+        while k < len(ops) - 1:
+            tag, i1, i2, j1, j2 = ops[k]
+            before, after = ops[k - 1], ops[k + 1]
+            if (
+                tag == 'equal'
+                and j1  # an equal run between two changes never starts the text
+                and '\n' not in b_gaps[j1 - 1] + b_gaps[j2 - 1]
+                and not any(is_tag(w) for w in a[i1:i2])
+                and i2 - i1 <= min(length(before), length(after))
+            ):
+                ops[k - 1 : k + 2] = [('replace', before[1], after[2], before[3], after[4])]
+                k = max(k - 1, 1)  # the merged change may now absorb the run before it
+            else:
+                k += 1
+        return ops
+
+    def diff_words(self, old: str, new: str) -> list[tuple[str, str]]:
+        """Compare the words of two texts.
+
+        :param old: The old text.
+        :param new: The new text.
+        :returns: The new text with the deleted words inserted, as segments (kind, text) where kind is '=' (unchanged
+           words and whitespace), '-' (deleted words) or '+' (added words). The whitespace is the new text's, except
+           the one before deleted words.
+        """
+        a_lead, a, a_gaps = self.tokenize(old, self.state.old_mime_type)
+        b_lead, b, b_gaps = self.tokenize(new, self.state.new_mime_type)
+        segments = [('=', b_lead if b or not a else a_lead)]
+        pending = ''  # the whitespace following the last word of the new text, not yet added
+        opcodes = self.semantic_cleanup(difflib.SequenceMatcher(a=a, b=b, autojunk=False).get_opcodes(), a, b, b_gaps)
+        for tag, i1, i2, j1, j2 in opcodes:
+            if tag in {'delete', 'replace'}:
+                segments.extend((('=', a_gaps[i1 - 1] if i1 else ''), ('-', self.join_words(a, a_gaps, i1, i2))))
+            if tag in {'equal', 'insert', 'replace'}:
+                segments.append(('=', pending or (' ' if tag == 'replace' else '')))  # '[-a-] {+b+}'
+                segments.append(('=' if tag == 'equal' else '+', self.join_words(b, b_gaps, j1, j2)))
+                pending = b_gaps[j2 - 1]
+        segments.append(('=', pending if b else a_gaps[-1] if a else ''))
+        return [segment for segment in segments if segment[1]]
+
+    def diff_lines(self, old: str, new: str) -> list[tuple[str, str]]:
+        """Compare two texts line by line, then word by word within each block of changed lines.
+
+        :param old: The old text.
+        :param new: The new text.
+        :returns: The segments (kind, text) of the diff; see diff_words().
+        """
+        old_lines = old.splitlines(keepends=True)
+        new_lines = new.splitlines(keepends=True)
+        segments: list[tuple[str, str]] = []
+        for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(a=old_lines, b=new_lines, autojunk=False).get_opcodes():
+            if tag == 'equal':
+                segments.append(('=', ''.join(new_lines[j1:j2])))
+            else:
+                segments.extend(self.diff_words(''.join(old_lines[i1:i2]), ''.join(new_lines[j1:j2])))
+        return segments
+
+    def render_lines(
+        self, segments: list[tuple[str, str]], text_markers: dict[str, tuple[str, str]], html_markers: dict[str, str]
+    ) -> list[tuple[str, str, bool]]:
+        """Render the segments of the diff as lines of text and HTML.
+
+        Changed words are put between markers on each line they span, the whitespace around them staying outside.
+        With HTML data, the HTML has the markup of the new data: deleted tags are dropped and added ones kept as they
+        are, the markers going around text only (in the text, tags are marked as words).
+
+        :param segments: The segments (kind, text); see diff_words().
+        :param text_markers: The text markers (start, end) of the '-' and '+' kinds.
+        :param html_markers: The HTML opening tags of the '-' and '+' kinds (closed by </span>).
+        :returns: For each line, its text, its HTML and whether it has changes.
+        """
+        mime_type = self.state.new_mime_type
+        is_html = 'html' in mime_type
+        escape = (lambda s: s) if is_html or 'markdown' in mime_type else html.escape
+
+        def change_html(kind: str, words: str) -> str:
+            if not is_html:
+                return f'{html_markers[kind]}{escape(words)}</span>'
+            parts = []
+            for part in self.HTML_TAG_RE.split(words):
+                if self.HTML_TAG_RE.fullmatch(part):
+                    parts.append(part if kind == '+' else '')  # the markup of the new data
+                elif part.strip():
+                    stripped = part.strip()
+                    start = part.index(stripped)
+                    parts.append(f'{part[:start]}{html_markers[kind]}{stripped}</span>{part[start + len(stripped) :]}')
+                else:
+                    parts.append(part)
+            return ''.join(parts)
+
+        lines: list[list[tuple[str, str]]] = [[]]
+        for kind, text in segments:
+            for k, piece in enumerate(text.split('\n')):
+                if k:
+                    lines.append([])
+                if piece:
+                    lines[-1].append((kind, piece))
+        if not lines[-1]:  # the text ended with a newline
+            lines.pop()
+        rendered = []
+        for line in lines:
+            texts, htmls, changed = [], [], False
+            nothing_deleted = False  # a deletion of markup only, so no space is needed before what follows
+            for kind, piece in line:
+                stripped = piece.strip()
+                if kind == '=' or not stripped:
+                    texts.append(piece)
+                    if not (nothing_deleted and not stripped):
+                        htmls.append(escape(piece))
+                    nothing_deleted = False
+                    continue
+                changed = True
+                start = piece.index(stripped)
+                before, after = piece[:start], piece[start + len(stripped) :]
+                texts.append(f'{before}{text_markers[kind][0]}{stripped}{text_markers[kind][1]}{after}')
+                change = change_html(kind, stripped)
+                htmls.append(f'{before}{change}{after}')
+                nothing_deleted = kind == '-' and not change.strip()
+            rendered.append((''.join(texts), ''.join(htmls), changed))
+        return rendered
 
     @classmethod
-    def keep_context_lines(cls, diff_text: str, diff_html: str, contextlines: int, range_info: bool) -> tuple[str, str]:
+    def keep_context_lines(
+        cls, lines: list[tuple[str, str, bool]], contextlines: int, range_info: bool
+    ) -> tuple[str, str]:
         """Keep only the lines with changes and the context lines around them.
 
-        :param diff_text: The text diff.
-        :param diff_html: The HTML diff, line by line the same as the text one, whose changes are marked by spans
-           styled with css_added_style or css_deltd_style (the text diff's markers depend on the 'color' directive).
+        :param lines: For each line of the diff, its text, its HTML and whether it has changes.
         :param contextlines: The number of context lines around each changed line.
         :param range_info: Whether to mark each range of lines skipped with an ``@@ first...last @@`` line.
         :returns: The text and HTML diffs.
         """
-        markers = (f'<span style="{cls.css_added_style}">', f'<span style="{cls.css_deltd_style}">')
-        lines_with_changes = [
-            i for i, line in enumerate(diff_html.splitlines()) if markers[0] in line or markers[1] in line
-        ]
-        if contextlines:
-            lines_to_keep: set[int] = set()
-            for i in lines_with_changes:
+        lines_to_keep: set[int] = set()
+        for i, (_, _, changed) in enumerate(lines):
+            if changed:
                 lines_to_keep.update(range(i - contextlines, i + contextlines + 1))
-        else:
-            lines_to_keep = set(lines_with_changes)
-        new_diff_text = []
-        new_diff_html = []
-        last_line = 0
-        skip = False
-        i = 0
-        for i, (line_text, line_html) in enumerate(zip(diff_text.splitlines(), diff_html.splitlines(), strict=False)):
+        diff_text = []
+        diff_html = []
+
+        def skipped(first: int, last: int) -> None:
+            if range_info:
+                diff_text.append(f'@@ {first}...{last} @@')
+                diff_html.append(f'<span style="{cls.css_range_style}">@@ {first}...{last} @@</span>')
+
+        skip_start = None  # the index of the first line of the range being skipped
+        for i, (line_text, line_html, _) in enumerate(lines):
             if i in lines_to_keep:
-                if range_info and skip:
-                    new_diff_text.append(f'@@ {last_line + 1}...{i} @@')
-                    new_diff_html.append(f'<span style="{cls.css_range_style}">@@ {last_line + 1}...{i} @@</span>')
-                    skip = False
-                new_diff_text.append(line_text)
-                new_diff_html.append(line_html)
-                last_line = i + 1
-            else:
-                skip = True
-        if (i + 1) != last_line and range_info and skip:
-            new_diff_text.append(f'@@ {last_line + 1}...{i + 1} @@')
-            new_diff_html.append(f'<span style="{cls.css_range_style}">@@ {last_line + 1}...{i + 1} @@</span>')
-        return '\n'.join(new_diff_text), '\n'.join(new_diff_html)
+                if skip_start is not None:
+                    skipped(skip_start + 1, i)
+                    skip_start = None
+                diff_text.append(line_text)
+                diff_html.append(line_html)
+            elif skip_start is None:
+                skip_start = i
+        if skip_start is not None:
+            skipped(skip_start + 1, len(lines))
+        return '\n'.join(diff_text), '\n'.join(diff_html)
 
     def markdown_diff_to_html(self, lines: list[str], html_add: str, html_rem: str) -> str:
         """Convert the lines of the HTML diff of Markdown data to HTML, line by line.
@@ -2680,35 +2819,22 @@ class WdiffDiffer(DifferBase):
         if not isinstance(self.state.new_data, str):
             raise ValueError
 
-        # Split the texts into words tokenizing newline
-        a = self.tokenize(self.state.old_data, self.state.old_mime_type)
-        b = self.tokenize(self.state.new_data, self.state.new_mime_type)
-
-        # Create a Differ object
-        import difflib
-
-        # Generate a difference list
-        diff = difflib.SequenceMatcher(a=a, b=b, autojunk=False)
-
         if directives.get('color', True):
-            text_rem = '\033[91m'
-            text_rem_end = '\033[0m '
-            text_add = '\033[92m'
-            text_add_end = '\033[0m'
+            text_markers = {'-': ('\033[91m', '\033[0m'), '+': ('\033[92m', '\033[0m')}
         else:
-            text_rem = '[-'
-            text_rem_end = '-] '
-            text_add = '{+'
-            text_add_end = '+}'
-
-        html_rem = f'<span style="{self.css_deltd_style}">'  # these markers are relied upon by keep_context_lines()
-        html_rem_end = '</span> '
+            text_markers = {'-': ('[-', '-]'), '+': ('{+', '+}')}
+        html_rem = f'<span style="{self.css_deltd_style}">'
         html_add = f'<span style="{self.css_added_style}">'
-        html_add_end = '</span>'
+
+        lines = self.render_lines(
+            self.diff_lines(self.state.old_data, self.state.new_data), text_markers, {'-': html_rem, '+': html_add}
+        )
+        if not any(changed for _, _, changed in lines):  # only whitespace changed
+            self.state.verb = 'changed,no_report'
+            return {'plain': '', 'markdown': '', 'html': ''}
 
         head_text = '\n'.join(
             [
-                # f'Differ: wdiff',
                 f'\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m',
                 f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m',
                 '',
@@ -2718,7 +2844,6 @@ class WdiffDiffer(DifferBase):
             [
                 (
                     '<span style="font-family:monospace;">'
-                    # 'Differ: wdiff',
                     f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>'
                 ),
                 (
@@ -2729,163 +2854,12 @@ class WdiffDiffer(DifferBase):
             ]
         )
 
-        result_text = []
-        result_html = []
-
-        def append_chunk(tokens: list[str], text_start: str, text_end: str, html_start: str, html_end: str) -> None:
-            # We use an empty string join because tokens now include their own spaces
-            segment = ''.join(tokens)
-
-            # Handle the newline marker replacement without adding extra spaces
-            parts = segment.split('<\\n>')
-            for i, part in enumerate(parts):
-                if part:
-                    result_text.append(f'{text_start}{part}{text_end}')
-                    result_html.append(f'{html_start}{part}{html_end}')
-
-                # If not the last element, it means there was a <\n>
-                if i < len(parts) - 1:
-                    result_text.append('\n')
-                    result_html.append('\n')
-
-        # Process the diff opcodes
-        for tag, i1, i2, j1, j2 in diff.get_opcodes():
-            """
-            The tags are strings, with these meanings:
-
-            'replace':  a[i1:i2] should be replaced by b[j1:j2]
-            'delete':   a[i1:i2] should be deleted.
-                        Note that j1==j2 in this case.
-            'insert':   b[j1:j2] should be inserted at a[i1:i1].
-                        Note that i1==i2 in this case.
-            'equal':    a[i1:i2] == b[j1:j2]
-            """
-            if tag == 'equal':
-                append_chunk(a[i1:i2], '', '', '', '')
-            elif tag == 'delete':
-                append_chunk(a[i1:i2], text_rem, text_rem_end, html_rem, html_rem_end)
-            elif tag == 'insert':
-                append_chunk(b[j1:j2], text_add, text_add_end, html_add, html_add_end)
-            elif tag == 'replace':
-                append_chunk(a[i1:i2], text_rem, text_rem_end, html_rem, html_rem_end)
-                append_chunk(b[j1:j2], text_add, text_add_end, html_add, html_add_end)
-
-        # rebuild the text from words, replacing the newline token
-        diff_text = ''.join(result_text).rstrip(' ')
-        diff_html = ''.join(result_html).rstrip(' ')
-
-        # d = difflib.Differ()
-
-        # # Generate a difference list
-        # diff = list(d.compare(old_tokens, new_tokens))
-
-        # add_html = '<span style="background-color:#d1ffd1;color:#082b08;">'
-        # rem_html = '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
-
-        # head_text = '\n'.join(
-        #     [
-        #         # f'Differ: wdiff',
-        #         f'\033[91m--- @ {self.make_timestamp(self.state.old_timestamp, tz)}\033[0m',
-        #         f'\033[92m+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}\033[0m',
-        #         '',
-        #     ]
-        # )
-        # head_html = '<br>\n'.join(
-        #     [
-        #         '<span style="font-family:monospace;">'
-        #         # 'Differ: wdiff',
-        #         f'<span style="color:darkred;">--- @ {self.make_timestamp(self.state.old_timestamp, tz)}</span>',
-        #         f'<span style="color:darkgreen;">+++ @ {self.make_timestamp(self.state.new_timestamp, tz)}</span>'
-        #         f'</span>',
-        #         '',
-        #     ]
-        # )
-        # # Process the diff output to make it more wdiff-like
-        # result_text = []
-        # result_html = []
-        # prev_word_text = ''
-        # prev_word_html = ''
-        # next_text = ''
-        # next_html = ''
-        # add = False
-        # rem = False
-
-        # for word_text in [*diff, '  ']:
-        #     if word_text[0] == '?':  # additional context line
-        #         continue
-        #     word_html = word_text
-        #     pre_text = [next_text] if next_text else []
-        #     pre_html = [next_html] if next_html else []
-        #     next_text = ''
-        #     next_html = ''
-
-        #     if word_text[0] == '+' and not add:  # Beginning of additions
-        #         if rem:
-        #             prev_word_html += '</span>'
-        #             rem = False
-        #         if word_text[2:] == '<\\n>':
-        #             next_text = '\033[92m'
-        #             next_html = add_html
-        #         else:
-        #             pre_text.append('\033[92m')
-        #             pre_html.append(add_html)
-        #         add = True
-        #     elif word_text[0] == '-' and not rem:  # Beginning of deletions
-        #         if add:
-        #             prev_word_html += '</span>'
-        #             add = False
-        #         if word_text[2:] == '<\\n>':
-        #             next_text = '\033[91m'
-        #             next_html = rem_html
-        #         else:
-        #             pre_text.append('\033[91m')
-        #             pre_html.append(rem_html)
-        #         rem = True
-        #     elif word_text[0] == ' ' and (add or rem):  # Unchanged word
-        #         if prev_word_text == '<\\n>':
-        #             prev_word_text = '\033[0m<\\n>'
-        #             prev_word_html = '</span><\\n>'
-        #         else:
-        #             prev_word_text += '\033[0m'
-        #             prev_word_html += '</span>'
-        #         add = False
-        #         rem = False
-        #     elif word_text[2:] == '<\\n>':  # New line
-        #         if add:
-        #             word_text = '  \033[0m<\\n>'
-        #             word_html = '  </span><\\n>'
-        #             add = False
-        #         elif rem:
-        #             word_text = '  \033[0m<\\n>'
-        #             word_html = '  </span><\\n>'
-        #             rem = False
-
-        #     result_text.append(prev_word_text)
-        #     result_html.append(prev_word_html)
-        #     pre_text.append(word_text[2:])
-        #     pre_html.append(word_html[2:])
-        #     prev_word_text = ''.join(pre_text)
-        #     prev_word_html = ''.join(pre_html)
-        # if add or rem:
-        #     result_text[-1] += '\033[0m'
-        #     result_html[-1] += '</span>'
-
-        # # rebuild the text from words, replacing the newline token
-        # diff_text = ' '.join(result_text[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
-        # diff_html = ' '.join(result_html[1:]).replace('<\\n> ', '\n').replace('<\\n>', '\n')
-
-        # build contextlines
         contextlines = directives.get('context_lines', self.job.contextlines)
-        # contextlines = 999
         if contextlines is None:
             contextlines = 3
-        range_info = directives.get('range_info', True)
-        if contextlines < len(diff_text.splitlines()):
-            diff_text, diff_html = self.keep_context_lines(diff_text, diff_html, contextlines, range_info)
+        diff_text, diff_html = self.keep_context_lines(lines, contextlines, directives.get('range_info', True))
 
         if self.state.is_markdown():
-            diff_text = diff_text.replace('</s>', ' ')
-            diff_html = diff_html.replace('</s>', ' ')
             # Line by line, as the unified differ does: in Markdown from the html2text filter (single_line_break) each
             # line is a block of its own, and mark_to_html() handles list items, indentation, '* * *' and headings
             # only at the start of the text it is given

@@ -1495,7 +1495,7 @@ WDIFF_TEST_DATA = [
             ),
             (
                 'This is <span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">medium old'
-                '</span> <span style="background-color:#d1ffd1;color:#082b08;">newish</span> text<br>'
+                '</span> <span style="background-color:#d1ffd1;color:#082b08;">newish</span> text'
             ),
         ],
     ),
@@ -1530,14 +1530,52 @@ WDIFF_TEST_DATA = [
     ),
     (
         'text/plain',
-        'a b',
-        'a  b',
-        ['a[- -] {+  +}b'],
-        ['a\x1b[91m \x1b[0m \x1b[92m  \x1b[0mb'],
+        'Effective 2026.',
+        'Effective  2026;',  # punctuation is a word of its own; whitespace is not compared
+        ['Effective  2026[-.-] {+;+}'],
+        ['Effective  2026\x1b[91m.\x1b[0m \x1b[92m;\x1b[0m'],
         [
             (
-                'a<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"> </span> '
-                '<span style="background-color:#d1ffd1;color:#082b08;">  </span>b'
+                'Effective  2026<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">.'
+                '</span> <span style="background-color:#d1ffd1;color:#082b08;">;</span>'
+            )
+        ],
+    ),
+    (
+        'text/plain',
+        '模型价格为两美元 a<b',
+        '模型价格为三美元 a<b',  # Han characters are words of their own; plain text is escaped in HTML
+        ['模型价格为[-两-] {+三+}美元 a<b'],
+        ['模型价格为\x1b[91m两\x1b[0m \x1b[92m三\x1b[0m美元 a<b'],
+        [
+            (
+                '模型价格为<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">两'
+                '</span> <span style="background-color:#d1ffd1;color:#082b08;">三</span>美元 a&lt;b'
+            )
+        ],
+    ),
+    (
+        'text/plain',
+        'The model is available in the paid tier of the API.',
+        'The new model is not yet available to the users of the free tier.',  # semantic cleanup
+        [
+            (
+                'The {+new+} model is [-available in the paid tier of the API-] {+not yet available to the users of '
+                'the free tier+}.'
+            )
+        ],
+        [
+            (
+                'The \x1b[92mnew\x1b[0m model is \x1b[91mavailable in the paid tier of the API\x1b[0m \x1b[92mnot yet '
+                'available to the users of the free tier\x1b[0m.'
+            )
+        ],
+        [
+            (
+                'The <span style="background-color:#d1ffd1;color:#082b08;">new</span> model is <span '
+                'style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">available in the paid '
+                'tier of the API</span> <span style="background-color:#d1ffd1;color:#082b08;">not yet available to the '
+                'users of the free tier</span>.'
             )
         ],
     ),
@@ -1561,14 +1599,12 @@ WDIFF_TEST_DATA = [
         'text/markdown',
         '**one flower**\n',
         '**two flowers**\n',
-        ['**[-one-] {+two+} [-flower-] {+flowers+}**'],
-        ['**\x1b[91mone\x1b[0m \x1b[92mtwo\x1b[0m \x1b[91mflower\x1b[0m \x1b[92mflowers\x1b[0m**'],
+        ['**[-one flower-] {+two flowers+}**'],
+        ['**\x1b[91mone flower\x1b[0m \x1b[92mtwo flowers\x1b[0m**'],
         [
             (
-                '<strong><span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">one</span> '
-                '<span style="background-color:#d1ffd1;color:#082b08;">two</span> '
-                '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">flower</span> '
-                '<span style="background-color:#d1ffd1;color:#082b08;">flowers</span></strong>'
+                '<strong><span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">one flower'
+                '</span> <span style="background-color:#d1ffd1;color:#082b08;">two flowers</span></strong>'
             )
         ],
     ),
@@ -1576,14 +1612,12 @@ WDIFF_TEST_DATA = [
         'text/markdown',
         '~~one flower~~\n',
         '~~two flowers~~\n',
-        ['~~[-one-] {+two+} [-flower-] {+flowers+}~~'],
-        ['~~\x1b[91mone\x1b[0m \x1b[92mtwo\x1b[0m \x1b[91mflower\x1b[0m \x1b[92mflowers\x1b[0m~~'],
+        ['~~[-one flower-] {+two flowers+}~~'],
+        ['~~\x1b[91mone flower\x1b[0m \x1b[92mtwo flowers\x1b[0m~~'],
         [
             (
-                '<s><span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">one</span> '
-                '<span style="background-color:#d1ffd1;color:#082b08;">two</span> '
-                '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">flower</span> '
-                '<span style="background-color:#d1ffd1;color:#082b08;">flowers</span></s>'
+                '<s><span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">one flower'
+                '</span> <span style="background-color:#d1ffd1;color:#082b08;">two flowers</span></s>'
             )
         ],
     ),
@@ -1607,28 +1641,25 @@ WDIFF_TEST_DATA = [
         'text/markdown',
         '**one flower**\n',
         'one flower\n',
-        ['[-**-] one flower[-**-] '],
-        ['\x1b[91m**\x1b[0m one flower\x1b[91m**\x1b[0m '],
+        ['[-**-]one flower[-**-]'],
+        ['\x1b[91m**\x1b[0mone flower\x1b[91m**\x1b[0m'],
         [
             (
-                '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">**</span> '
+                '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">**</span>'
                 'one flower<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">'
-                '**</span> '
+                '**</span>'
             )
         ],
     ),
+    # HTML: the HTML diff has the markup of the new data (deleted tags dropped, added ones kept as they are), the
+    # markers going around text only
     (
         'text/html',
         'Text',
         '<b>Text</b>',
         ['{+<b>+}Text{+</b>+}'],
         ['\x1b[92m<b>\x1b[0mText\x1b[92m</b>\x1b[0m'],
-        [
-            (
-                '<span style="background-color:#d1ffd1;color:#082b08;"><b></span>Text'
-                '<span style="background-color:#d1ffd1;color:#082b08;"></b></span>'
-            )
-        ],
+        ['<b>Text</b>'],
     ),
     (
         'text/html',
@@ -1636,12 +1667,7 @@ WDIFF_TEST_DATA = [
         '<span>',
         ['[-<div>-] {+<span>+}'],
         ['\x1b[91m<div>\x1b[0m \x1b[92m<span>\x1b[0m'],
-        [
-            (
-                '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><div></span> '
-                '<span style="background-color:#d1ffd1;color:#082b08;"><span></span>'
-            )
-        ],
+        ['<span>'],
     ),
     (
         'text/html',
@@ -1649,10 +1675,18 @@ WDIFF_TEST_DATA = [
         '<div id="b">',
         ['[-<div id="a">-] {+<div id="b">+}'],
         ['\x1b[91m<div id="a">\x1b[0m \x1b[92m<div id="b">\x1b[0m'],
+        ['<div id="b">'],
+    ),
+    (
+        'text/html',
+        '<tr><td>a</td><td>b</td></tr>',
+        '<tr><td>a</td></tr>',
+        ['<tr><td>a</td>[-<td>b</td>-]</tr>'],
+        ['<tr><td>a</td>\x1b[91m<td>b</td>\x1b[0m</tr>'],
         [
             (
-                '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><div id="a">'
-                '</span> <span style="background-color:#d1ffd1;color:#082b08;"><div id="b"></span>'
+                '<tr><td>a</td><span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;">b'
+                '</span></tr>'
             )
         ],
     ),
@@ -1675,12 +1709,7 @@ WDIFF_TEST_DATA = [
         '<br/>',
         ['[-<br>-] {+<br/>+}'],
         ['\x1b[91m<br>\x1b[0m \x1b[92m<br/>\x1b[0m'],
-        [
-            (
-                '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><br></span> '
-                '<span style="background-color:#d1ffd1;color:#082b08;"><br/></span>'
-            )
-        ],
+        ['<br/>'],
     ),
     (
         'text/html',
@@ -1688,12 +1717,7 @@ WDIFF_TEST_DATA = [
         '<!-- new -->',
         ['[-<!-- old -->-] {+<!-- new -->+}'],
         ['\x1b[91m<!-- old -->\x1b[0m \x1b[92m<!-- new -->\x1b[0m'],
-        [
-            (
-                '<span style="background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;"><!-- old -->'
-                '</span> <span style="background-color:#d1ffd1;color:#082b08;"><!-- new --></span>'
-            )
-        ],
+        ['<!-- new -->'],
     ),
 ]
 
@@ -1740,6 +1764,37 @@ def test_wdiff_context_lines(color: bool, changed_line: str, job_state: JobState
     assert job_state.get_diff().splitlines()[2:] == ['@@ 1...4 @@', 'line 4', changed_line, 'line 6', '@@ 8...10 @@']
 
 
+@pytest.mark.parametrize(
+    ('old_data', 'new_data'),
+    [('a b\n', 'a  b\n'), ('a\nb\n', 'a\n\nb\n'), ('a\n\nb\n', 'a\nb\n'), ('a b\n', 'a\nb\n'), ('a\n', 'a')],
+)
+def test_wdiff_whitespace_only(old_data: str, new_data: str, job_state: JobState) -> None:
+    """Test that a change of whitespace only (including blank lines and line breaks) is not reported."""
+    job_state.old_data = old_data
+    job_state.new_data = new_data
+    job_state.job.differ = {'name': 'wdiff'}
+    assert job_state.get_diff() == ''
+    assert job_state.verb == 'changed,no_report'
+
+
+@pytest.mark.parametrize(
+    ('old_data', 'new_data', 'expected'),
+    [
+        ('a\nb\nc\n', 'a\nc\n', ['a', '[-b-]', 'c']),  # a deleted line is shown as a line of its own
+        ('a\nc\n', 'a\nb\nc\n', ['a', '{+b+}', 'c']),
+        ('a\n  b c\nd\n', 'a\nd\n', ['a', '  [-b c-]', 'd']),  # the indentation stays outside the markers
+        ('x old\ny\n', 'x\ny\n', ['x [-old-]', 'y']),
+        ('one\ntwo\n', 'one two\nthree\n', ['one two', '{+three+}']),  # joined lines are not a change
+    ],
+)
+def test_wdiff_lines(old_data: str, new_data: str, expected: list[str], job_state: JobState) -> None:
+    """Test how lines added, deleted and changed are shown."""
+    job_state.old_data = old_data
+    job_state.new_data = new_data
+    job_state.job.differ = {'name': 'wdiff', 'color': False}
+    assert job_state.get_diff().splitlines()[2:] == expected
+
+
 @pytest.mark.parametrize('mime_type', ['text/plain', 'text/markdown'])
 def test_wdiff_context_lines_html(mime_type: str, job_state: JobState) -> None:
     """Test that the range information lines of the HTML diff are styled as those of the unified differ."""
@@ -1766,7 +1821,7 @@ def test_wdiff_markdown_table(job_state: JobState) -> None:
         (
             '<table style="border-collapse:collapse;">'
             f'<tr><td style="{cell}">Model</td><td style="{cell}">Price</td></tr>'
-            f'<tr><td style="{cell}">A</td><td style="{cell}">{deleted}$1</span> {added}$3</span></td></tr>'
+            f'<tr><td style="{cell}">A</td><td style="{cell}">${deleted}1</span> {added}3</span></td></tr>'
             f'<tr><td style="{cell}">{added}B</span></td><td style="{cell}">{added}$4</span></td></tr>'
             '</table>'
         ),

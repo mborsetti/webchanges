@@ -828,14 +828,36 @@ Performs a word-by-word comparison highlighting words that have been added (:add
 (:deletions:`deleted`). Changed words are displayed twice: once marked as "deleted" (:deletions:`deleted`)
 representing the old word(s), and the new word(s) as "added" (:additions:`added`). Line breaks are maintained.
 
-When the data is Markdown, bold (``**``) and strikethrough (``~~``) markers are treated as separate tokens, so a
-change to a word inside an emphasized phrase does not report the unchanged markers as part of the change (e.g.
-``**one flower**`` becoming ``**two flowers**`` is reported as ``**[-one-] {+two+} [-flower-] {+flowers+}**``).
+It is similar to `GNU's Wdiff <https://www.gnu.org/software/wdiff/>`__ and to ``git diff --word-diff``, but requires
+no external dependency:
 
-It is similar to `GNU's Wdiff <https://www.gnu.org/software/wdiff/>`__, but requires no external dependency.
+* As with ``git``, the data is first compared line by line, then word by word within each block of changed lines. This
+  is fast even with large data, and a word is never matched with a common one on a distant line.
+* Whitespace separates words and is not compared, so a change of whitespace only (e.g. spaces added, a blank line
+  removed, or a line split in two) is not a change, and is not reported.
+* A word is a run of letters and digits, which can include a ``.``, ``,``, ``:``, ``/``, ``-`` or apostrophe between
+  them (e.g. ``2.50``, ``1,000``, ``e-mail``, ``don't``); any other character, such as punctuation, is a word of its own.
+  In Chinese and Japanese, which are written without spaces, each Han or kana character is a word.
+* A rewritten phrase is reported as one change rather than as a patchwork of changes around the words it has in common
+  with the old one (e.g. "the", "of"): unchanged words between two changes are included in them when they are no more
+  than either (as the semantic cleanup of `diff-match-patch <https://github.com/google/diff-match-patch>`__ does),
+  except at the start or end of a line.
+
+When the data is Markdown, links, images and code spans are words (a change marker inside them would break them), and
+bold (``**``, ``__``) and strikethrough (``~~``) markers are words of their own, so a change to a word inside an
+emphasized phrase does not report the unchanged markers as part of the change (e.g. ``**one flower**`` becoming ``**two
+flowers**`` is reported as ``**[-one flower-] {+two flowers+}**``).
+
+When the data is HTML, tags, comments and character references (e.g. ``&copy;``) are words. In the text report they
+are marked as any other word; in the HTML report the markup is that of the new data (deleted tags are dropped and added
+ones kept as they are), and only the text is marked, so that the report remains valid HTML.
 
 When unchanged lines are skipped, they are reported using ``@@``. For example, ``@@ 1...22 @@`` means that lines 1 to
-22 are skipped from the report as they are unchanged.
+22 of the diff are skipped from the report as they are unchanged.
+
+.. versionchanged:: NEXT
+   Compares lines first, ignores changes of whitespace only, splits punctuation and Han and kana characters into words
+   of their own, reports rewritten phrases as one change, and keeps the HTML report of HTML data valid.
 
 Example
 ```````

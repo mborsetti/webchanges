@@ -70,6 +70,15 @@ Changed
   ``wdiff`` differs, where each row keeps the colors of an added or deleted line or has its changed words marked
   within its cells. The new ``markdown_tables`` job directive set to false keeps the previous rendering. See
   :ref:`here <markdown_tables>`.
+* ``wdiff`` differ: Rewritten along the lines of ``git diff --word-diff``. The data is now compared line by line first,
+  then word by word within each block of changed lines, making it much faster with large data (a 75 KB page ran 550
+  times faster) and preventing words from being matched with common ones on distant lines. Whitespace is no longer
+  compared, so a change of whitespace only is not reported (this also fixes blank lines added or removed being shown
+  as an unmarked extra blank line, or not at all). Punctuation characters are now words of their own (e.g.
+  ``2026[-.-] {+;+}``), as are Han and kana characters (previously a whole line of Chinese or Japanese text was one
+  word), and a rewritten phrase is reported as one change rather than as a patchwork of changes around its common
+  words. With HTML data, the HTML report now has the markup of the new data with only the text marked, instead of
+  change markers around tags making it invalid. See :ref:`here <wdiff_diff>`.
 
 Deprecated
 ``````````
