@@ -26,8 +26,8 @@ Why switch
 
 Reports you can read at a glance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-* HTML reports keep the page's formatting (**bold**, *italics*, :underline:`underlining`, headers, bulleted lists and
-  indentation) and its links stay clickable.
+* HTML reports keep the page's formatting (**bold**, *italics*, :underline:`underlining`, headers, bulleted lists,
+  indentation and :ref:`tables <markdown_tables>`) and its links stay clickable.
 * :additions:`Added` and :deletions:`deleted` lines are marked with color and strikethrough, readable in dark mode
   and in email clients that strip stylesheets, such as Gmail.
 * Long lines wrap instead of being cut off.
@@ -81,6 +81,8 @@ Snapshots you can trust
 Tools for maintaining your jobs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * :ref:`--errors <error>` runs every job and lists those that fail or whose filters return nothing.
+* A mistake in the jobs or configuration file, or in the settings of a filter, differ or reporter, is reported in a
+  plain message, without a Python traceback.
 * :ref:`--test-differ <test-differ>` replays the diffs of every snapshot saved, and :ref:`--test <test>` without a
   job checks your jobs and configuration files for errors.
 * Editors such as VS Code autocomplete and validate ``jobs.yaml`` and ``config.yaml`` from the JSON Schemas that
@@ -243,6 +245,8 @@ None of these need an edit, but they change what you see:
 * Jobs in reports are sorted alphabetically by name.
 * The ``telegram`` reporter's ``monospace`` sub-directive has no effect, as reports are sent in Markdown; it is
   reported as unrecognized.
+* TLS certificates are verified against the operating system's certificate store (OpenSSL's on Linux) instead of
+  ``certifi``'s. If a job fails with a certificate error, point ``SSL_CERT_FILE`` at the certificates to trust.
 * The ``xmpp`` reporter uses the ``slixmpp`` package instead of ``aioxmpp``; install it with
   ``pip install webchanges[xmpp]``. Its configuration and the password stored in the keyring carry over.
 * When run from a terminal, ``--enable``, ``--disable`` and ``--delete`` ask for confirmation before rewriting the

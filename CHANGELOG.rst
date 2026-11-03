@@ -36,7 +36,7 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version NEXT
+Version 3.40.0rc0
 -------------------
 Unreleased
 
@@ -104,10 +104,10 @@ Fixed
   instead of a clear error.
 * ``github_issue`` reporter: A numeric ``milestone``, as in the documentation's example, failed the validation of the
   configuration file. See :ref:`here <github_issue>`.
-* Bundled JSON Schemas: The configuration file's rejected files missing directives (e.g. written by an earlier
+* Bundled JSON Schemas: The configuration file's schema rejected files missing directives (e.g. written by an earlier
   version), top-level remarks (keys starting with ``_``) and the deprecated ``empty-diff: true``, but accepted
-  misspelled sub-directives of sections and reporters; the jobs file's rejected a ``command`` differ without ``name``
-  and the ``color`` sub-directive of the ``wdiff`` differ.
+  misspelled sub-directives of sections and reporters; the jobs file's schema rejected a ``command`` differ without
+  ``name`` and the ``color`` sub-directive of the ``wdiff`` differ.
 * ``wdiff`` differ: In HTML reports, the ``@@`` lines marking skipped lines are now styled as the ``unified`` differ's.
 * ``--features``: The ``deepdiff`` and ``wdiff`` differs had no description ("None"), and the descriptions of the
   ``beautify`` and ``xmltoyaml`` filters were cut mid-sentence.
