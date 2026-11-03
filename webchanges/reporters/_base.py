@@ -896,6 +896,22 @@ class MarkdownReporter(ReporterBase):
         return details_trimmed, summary, trimmed_details, footer
 
     @staticmethod
+    def _code_span_diff_headers(diff: str) -> str:
+        """Return a unified diff with its two header lines and its range information lines as Markdown code spans.
+
+        :param diff: The diff.
+        :returns: The diff, with those lines in backticks if it is a unified diff, else unchanged.
+        """
+        if diff[:3] not in {'+++', '---', '...'}:  # not a unified diff (with our '...' modification)
+            return diff
+        lines = diff.splitlines(keepends=True)
+        for i, line in enumerate(lines):
+            if i <= 1 or line.startswith('@@ '):
+                text = line.rstrip('\r\n')
+                lines[i] = f'`{text}`{line[len(text) :]}'  # the closing backtick before the line break
+        return ''.join(lines)
+
+    @staticmethod
     def _format_details_body(s: str, max_length: int | None = None) -> tuple[bool, str]:
         """Trim the details to fit the maximum length available; add a message when so done.
 
@@ -903,13 +919,6 @@ class MarkdownReporter(ReporterBase):
         :param max_length: The maximum length.
         :returns: The fitted string.
         """
-        if s[:3] in {'+++', '---', '...'}:  # is a unified diff (with our '...' modification)
-            lines = s.splitlines(keepends=True)
-            for i in range(len(lines)):
-                if i <= 1 or lines[i][:3] == '@@ ':
-                    lines[i] = f'`{lines[i]}`'
-            s = ''.join(lines)
-
         # Message to print when the diff is too long.
         trim_message = '*diff trimmed*\n'
         trim_message_length = len(trim_message)
@@ -943,13 +952,15 @@ class MarkdownReporter(ReporterBase):
         if job_state.verb == 'unchanged,error_ended':
             return f'_{job_state.old_error_data.get("type")} fixed; content unchanged._'
 
-        if job_state.verb == 'unchanged':
+        if job_state.verb in ('new', 'test'):
             return str(job_state.new_data)
 
         if job_state.old_data in {None, job_state.new_data}:
             return None
 
-        return job_state.get_diff('markdown', differ=differ, differ_defaults=self.differ_defaults, tz=self.tz)
+        return self._code_span_diff_headers(
+            job_state.get_diff('markdown', differ=differ, differ_defaults=self.differ_defaults, tz=self.tz)
+        )
 
     def _format_output(self, job_state: JobState) -> tuple[list[str], list[tuple[str, str]]]:
         summary_part: list[str] = []

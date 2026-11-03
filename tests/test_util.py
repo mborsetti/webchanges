@@ -6,6 +6,7 @@ import pytest
 
 from webchanges.util import (
     chunk_string,
+    dur_text,
     get_new_version_number,
     is_markdown_table_separator,
     linkify,
@@ -52,6 +53,13 @@ def test_chunk_tooshort_1(caplog: pytest.LogCaptureFixture) -> None:
     )
     message = caplog.text
     assert 'Not enough space to chunkify string with line numbering (1)' in message
+
+
+@pytest.mark.parametrize(
+    ('duration', 'expected'), [(0.5, '0.5 seconds'), (1.0, '1 second'), (12.3, '12 seconds'), (75, '1:15')]
+)
+def test_dur_text(duration: float, expected: str) -> None:
+    assert dur_text(duration) == expected
 
 
 def test_linkify() -> None:

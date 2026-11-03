@@ -449,7 +449,8 @@ def dur_text(duration: float) -> str:
     :returns: The formatted string.
     """
     if duration < 60:
-        return f'{float(f"{duration:.2g}"):g} seconds'
+        seconds = float(f'{duration:.2g}')
+        return f'{seconds:g} second{"" if seconds == 1 else "s"}'
     m, s = divmod(duration, 60)
     return f'{m:.0f}:{s:02.0f}'
 

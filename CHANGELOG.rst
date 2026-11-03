@@ -114,6 +114,10 @@ Fixed
 * ``keep_lines_containing`` and ``delete_lines_containing`` filters: Clearer error messages for an invalid regular
   expression in ``re``.
 * ``ai_google`` differ: Clearer retry error messages.
+* ``telegram``, ``matrix``, ``gotify`` and ``github_issue`` reporters, and ``webhook``/``discord`` with
+  ``markdown: true``: New jobs (and ``--test``) were reported as a diff against nothing instead of their content, as
+  other reporters do; the code spans around the header lines of a ``unified`` diff were closed on the next line;
+  content starting with ``---`` was taken for a diff.
 
 Internals impacting hooks.py
 ````````````````````````````

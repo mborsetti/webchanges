@@ -448,6 +448,38 @@ def test_html_markdown_to_html_tables() -> None:
     assert HtmlReporter.markdown_to_html(text, markdown_tables=False).count('<br>') == 4
 
 
+def test_markdown_reporter_new_job_reports_content() -> None:
+    """A new job is reported with its content, as by the text and HTML reporters, not as a diff against nothing."""
+    from webchanges.reporters import MarkdownReporter
+
+    test_report = Report(UrlwatchTest())  # ty:ignore[invalid-argument-type]
+    test_report.job_states = []
+    job_state = JobState(None, JobBase.unserialize({'url': 'https://example.com/new'}))  # ty:ignore[invalid-argument-type]
+    job_state.new_data = '--- a\nline two'
+    job_state.new_timestamp = 1605147837.511478
+    test_report.new(job_state)
+    reporter = MarkdownReporter(
+        test_report,
+        {},  # ty:ignore[invalid-argument-type]
+        test_report.job_states,
+        1.0,
+        [],
+        test_report.config['differ_defaults'],
+    )
+    out = '\n'.join(reporter.submit())
+    assert '\n--- a\nline two\n' in out  # unchanged: not taken for the header of a unified diff
+    assert '@@' not in out
+
+
+def test_markdown_reporter_code_span_diff_headers() -> None:
+    """The header and range lines of a unified diff become code spans, closed before the line break."""
+    from webchanges.reporters import MarkdownReporter
+
+    diff = '--- @ old\n+++ @ new\n@@ -1 +1 @@\n-a\n+b'
+    assert MarkdownReporter._code_span_diff_headers(diff) == '`--- @ old`\n`+++ @ new`\n`@@ -1 +1 @@`\n-a\n+b'
+    assert MarkdownReporter._code_span_diff_headers('text\n@@ -1 +1 @@') == 'text\n@@ -1 +1 @@'
+
+
 def _smtp_handshake_transcript(host: str, port: int) -> str:
     """Return a transcript of a fresh EHLO exchange with an SMTP server, to explain an unexpected mailer failure."""
     transcript = io.StringIO()
