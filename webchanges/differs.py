@@ -55,7 +55,16 @@ import html2text
 import yaml
 
 from webchanges._httpx import h2, httpx2
-from webchanges.util import SettingError, TrackSubClasses, linkify, mark_to_html, missing_dependency
+from webchanges.util import (
+    SettingError,
+    TrackSubClasses,
+    linkify,
+    mark_to_html,
+    markdown_table_html,
+    markdown_table_runs,
+    markdown_table_to_html,
+    missing_dependency,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -309,6 +318,7 @@ class DifferBase(metaclass=TrackSubClasses):
 
     __supported_directives__: dict[str, str] = {}  # this must be present, even if empty
 
+    css_range_style = 'font-family:monospace;background-color:#fbfbfb;'  # range information ('@@' lines)
     css_added_style = 'background-color:#d1ffd1;color:#082b08;'
     css_deltd_style = 'background-color:#fff0f0;color:#9c1c1c;text-decoration:line-through;'
     css_remvd_style = 'text-decoration:line-through;'
@@ -602,16 +612,15 @@ class UnifiedDiffer(DifferBase):
         :param diff: the unified diff
         """
 
-        def process_line(line: str, line_num: int, is_markdown: bool, monospace_style: str) -> str:
-            """Processes each line for HTML output, handling special cases and styles.
+        def line_style(line: str, line_num: int, monospace_style: str) -> str:
+            """Returns the style of a line of the diff.
 
-            :param line: The line to analyze.
-            :param line_num: The line number in the document.
+            :param line: The line.
+            :param line_num: The line number in the diff.
             :param monospace_style: Additional style string for monospace text.
 
-            :returns: The line processed into an HTML table row string.
+            :returns: The style (can be empty).
             """
-            # The style= string (or empty string) to add to an HTML tag.
             if line_num == 0:
                 style = 'font-family:monospace;color:darkred;'
             elif line_num == 1:
@@ -623,11 +632,24 @@ class UnifiedDiffer(DifferBase):
             elif line[0] == ' ':  # context line
                 style = monospace_style
             elif line[0] == '@':  # range information
-                style = 'font-family:monospace;background-color:#fbfbfb;'
+                style = self.css_range_style
             elif line[0] == '/':  # informational header added by additions_only or deletions_only filters
                 style = 'background-color:lightyellow;'
             else:
                 raise RuntimeError('Unified Diff does not comform to standard!')
+            return style
+
+        def process_line(line: str, line_num: int, is_markdown: bool, monospace_style: str) -> str:
+            """Processes each line for HTML output, handling special cases and styles.
+
+            :param line: The line to analyze.
+            :param line_num: The line number in the document.
+            :param monospace_style: Additional style string for monospace text.
+
+            :returns: The line processed into an HTML table row string.
+            """
+            # The style= string (or empty string) to add to an HTML tag.
+            style = line_style(line, line_num, monospace_style)
             style = f' style="{style}"' if style else ''
 
             if line_num > 1 and line[0] != '@':  # don't apply to headers or range information
@@ -646,8 +668,27 @@ class UnifiedDiffer(DifferBase):
         yield f'<table{table_style}>'
         is_markdown = self.state.is_markdown()
         monospace_style = 'font-family:monospace;' if self.job.monospace else ''
-        for i, line in enumerate(diff.splitlines()):
-            yield process_line(line, i, is_markdown, monospace_style)
+        lines = diff.splitlines()
+        tables: dict[int, tuple[int, int | None]] = {}
+        if is_markdown and self.job.markdown_tables is not False:
+            # Markdown tables in the added, deleted and context lines (not in the headers and range information)
+            contents = [line[1:] if i > 1 and line and line[0] in '+- ' else '' for i, line in enumerate(lines)]
+            tables = {run[0]: run[1:] for run in markdown_table_runs(contents)}
+        i = 0
+        while i < len(lines):
+            if i in tables:  # a nested table, its rows styled as their diff lines
+                stop, separator = tables[i]
+                table = markdown_table_to_html(
+                    [line[1:] for line in lines[i:stop]],
+                    None if separator is None else separator - i,
+                    self.job.markdown_extras,
+                    [line_style(lines[j], j, monospace_style) for j in range(i, stop)],
+                )
+                yield f'<tr><td>{table}</td></tr>'
+                i = stop
+            else:
+                yield process_line(lines[i], i, is_markdown, monospace_style)
+                i += 1
         yield '</table>'
 
     def differ(
@@ -2535,7 +2576,7 @@ class WdiffDiffer(DifferBase):
             if i in lines_to_keep:
                 if range_info and skip:
                     new_diff_text.append(f'@@ {last_line + 1}...{i} @@')
-                    new_diff_html.append(f'@@ {last_line + 1}...{i} @@')
+                    new_diff_html.append(f'<span style="{cls.css_range_style}">@@ {last_line + 1}...{i} @@</span>')
                     skip = False
                 new_diff_text.append(line_text)
                 new_diff_html.append(line_html)
@@ -2544,8 +2585,87 @@ class WdiffDiffer(DifferBase):
                 skip = True
         if (i + 1) != last_line and range_info and skip:
             new_diff_text.append(f'@@ {last_line + 1}...{i + 1} @@')
-            new_diff_html.append(f'@@ {last_line + 1}...{i + 1} @@')
+            new_diff_html.append(f'<span style="{cls.css_range_style}">@@ {last_line + 1}...{i + 1} @@</span>')
         return '\n'.join(new_diff_text), '\n'.join(new_diff_html)
+
+    def markdown_diff_to_html(self, lines: list[str], html_add: str, html_rem: str) -> str:
+        """Convert the lines of the HTML diff of Markdown data to HTML, line by line.
+
+        Unless the job's markdown_tables is false, the rows of Markdown tables are rendered as HTML tables (see
+        markdown_table_cells()).
+
+        :param lines: The lines: Markdown with the changes marked by spans starting with html_add and html_rem.
+        :param html_add: The opening tag of the span marking an addition.
+        :param html_rem: The opening tag of the span marking a deletion.
+        :returns: The HTML, newline-separated (a table is on one line).
+        """
+        tables: dict[int, tuple[int, int | None]] = {}
+        if self.job.markdown_tables is not False:
+            markers_re = re.compile(f'{re.escape(html_add)}|{re.escape(html_rem)}|</span>')
+            tables = {run[0]: run[1:] for run in markdown_table_runs([markers_re.sub('', line) for line in lines])}
+        html_lines = []
+        i = 0
+        while i < len(lines):
+            if i in tables:
+                stop, separator = tables[i]
+                html_lines.append(
+                    markdown_table_html(
+                        (
+                            [
+                                mark_to_html(cell, extras=self.job.markdown_extras)
+                                for cell in self.markdown_table_cells(lines[j], html_add, html_rem)
+                            ],
+                            separator is not None and j < separator,
+                            '',
+                        )
+                        for j in range(i, stop)
+                        if j != separator
+                    )
+                )
+                i = stop
+            else:
+                html_lines.append(mark_to_html(lines[i], self.job.markdown_padded_tables, self.job.markdown_extras))
+                i += 1
+        return '\n'.join(html_lines)
+
+    @staticmethod
+    def markdown_table_cells(line: str, html_add: str, html_rem: str) -> list[str]:
+        """Split a row of a Markdown table marked up with change spans into its cells.
+
+        A change can span cell boundaries (e.g. a whole row added), so a span open at a ``|`` is closed in its cell
+        and reopened in the next one.
+
+        :param line: The row, e.g. ``| a | <span …>b</span> |``.
+        :param html_add: The opening tag of the span marking an addition.
+        :param html_rem: The opening tag of the span marking a deletion.
+        :returns: The cells' Markdown, stripped of whitespace and of empty change spans.
+        """
+        parts = re.split(rf'({re.escape(html_add)}|{re.escape(html_rem)}|</span>|(?<!\\)\|)', line)
+        cells: list[list[str]] = [[]]
+        open_span = ''
+        for part in parts:
+            if part in {html_add, html_rem}:
+                open_span = part
+            elif part == '</span>':
+                open_span = ''
+            elif part == '|':
+                if open_span:
+                    cells[-1].append('</span>')
+                cells.append([open_span] if open_span else [])
+                continue
+            cells[-1].append(part)
+        opening = f'{re.escape(html_add)}|{re.escape(html_rem)}'
+        texts = []
+        for cell in cells:
+            text = re.sub(rf'({opening})\s+', r'\1', ''.join(cell))  # whitespace in a span's ends
+            text = re.sub(r'\s+</span>', '</span>', text)
+            texts.append(re.sub(rf'(?:{opening})</span>', '', text).strip())  # empty spans
+        plain = re.sub(rf'{re.escape(html_add)}|{re.escape(html_rem)}|</span>', '', line).strip()
+        if plain.startswith('|') and texts and not texts[0]:  # the cell before the row's leading '|'
+            texts.pop(0)
+        if plain.endswith('|') and not plain.endswith('\\|') and texts and not texts[-1]:
+            texts.pop()
+        return texts
 
     def differ(
         self,
@@ -2769,15 +2889,12 @@ class WdiffDiffer(DifferBase):
             # Line by line, as the unified differ does: in Markdown from the html2text filter (single_line_break) each
             # line is a block of its own, and mark_to_html() handles list items, indentation, '* * *' and headings
             # only at the start of the text it is given
-            diff_html = '\n'.join(
-                mark_to_html(line, self.job.markdown_padded_tables, self.job.markdown_extras)
-                for line in diff_html.splitlines()
-            )
+            diff_html = self.markdown_diff_to_html(diff_html.splitlines(), html_add, html_rem)
 
         if self.job.monospace:
             diff_html = f'<span style="font-family:monospace;white-space:pre-wrap">{diff_html}</span>'
         else:
-            diff_html = diff_html.replace('\n', '<br>\n')
+            diff_html = diff_html.replace('\n', '<br>\n').replace('</table><br>\n', '</table>\n')  # tables are blocks
 
         return {
             'plain': head_text + diff_text,

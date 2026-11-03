@@ -430,6 +430,24 @@ def test_html_markdown_to_html_extras() -> None:
     assert HtmlReporter.markdown_to_html('snake_case_name', None, {'middle-word-em': True}) == 'snake<em>case</em>name'
 
 
+def test_html_markdown_to_html_tables() -> None:
+    """Markdown table rows are rendered as an HTML table, unless the job's markdown_tables is false."""
+    from webchanges.reporters import HtmlReporter
+
+    text = 'Prices\n| Model | Price |\n| --- | --- |\n| [A](https://a.com) | **$1** |\nEnd'
+    cell = 'border:1px solid #999;padding:2px 6px;vertical-align:top;'
+    assert HtmlReporter.markdown_to_html(text) == (
+        'Prices\n'
+        '<table style="border-collapse:collapse;">'
+        f'<tr><th style="{cell}">Model</th><th style="{cell}">Price</th></tr>'
+        f'<tr><td style="{cell}"><a style="font-family:inherit" rel="noopener" target="_blank" href="https://a.com">A'
+        f'</a></td><td style="{cell}"><strong>$1</strong></td></tr>'
+        '</table>\n'
+        'End'
+    )
+    assert HtmlReporter.markdown_to_html(text, markdown_tables=False).count('<br>') == 4
+
+
 def _smtp_handshake_transcript(host: str, port: int) -> str:
     """Return a transcript of a fresh EHLO exchange with an SMTP server, to explain an unexpected mailer failure."""
     transcript = io.StringIO()

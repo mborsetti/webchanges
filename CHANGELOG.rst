@@ -65,6 +65,11 @@ Changed
 * Errors in the configuration or jobs file found at startup, and wrong settings of a filter, differ or reporter, are
   no longer buried in a Python traceback.
 * HTML reports: images in Markdown content are now at most 600 pixels wide (instead of the full width available).
+* HTML reports: the rows of Markdown tables (e.g. from the ``html2text`` filter) are now rendered as HTML tables
+  instead of as lines of text with ``|`` separators, both in the full content and in the diffs of the ``unified`` and
+  ``wdiff`` differs, where each row keeps the colors of an added or deleted line or has its changed words marked
+  within its cells. The new ``markdown_tables`` job directive set to false keeps the previous rendering. See
+  :ref:`here <markdown_tables>`.
 
 Deprecated
 ``````````
@@ -101,6 +106,8 @@ Fixed
 * ``wdiff`` differ: HTML reports of Markdown data (e.g. from the ``html2text`` filter) are now rendered line by line,
   as with the ``unified`` differ. List items were shown as literal ``*`` with their indentation lost, as were indented
   lines; headings were rendered at full size, and ``* * *`` as a horizontal rule (which separates jobs in reports).
+* ``wdiff`` differ: In HTML reports, the ``@@`` lines marking skipped unchanged lines are now in a monospace font on a
+  shaded background, as with the ``unified`` differ, instead of looking like part of the content.
 * ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
   descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.
 

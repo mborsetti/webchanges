@@ -1647,7 +1647,8 @@ markdown_padded_tables
 ----------------------
 Show the rows of Markdown tables (i.e. the lines containing a ``|``) in a monospace font when Markdown data (see
 :ref:`is_markdown`) is rendered as HTML for the ``html`` and ``email`` reports (true/false), so that the columns of a
-table padded with spaces line up. Defaults to false.
+table padded with spaces line up. Defaults to false. Tables are now rendered as HTML tables (see
+:ref:`markdown_tables`), so this applies only to the rows that are not, e.g. with ``markdown_tables: false``.
 
 It is set automatically to the value of the ``pad_tables`` sub-directive of the ``html2text`` filter (see
 :ref:`here <html2text>`), so it is normally needed only when the padded tables come from elsewhere, for example:
@@ -1657,7 +1658,35 @@ It is set automatically to the value of the ``pad_tables`` sub-directive of the 
    # yaml-language-server: $schema=jobs.schema.json
    command: python3 make_table.py
    is_markdown: true
+   markdown_tables: false
    markdown_padded_tables: true
+
+
+.. _markdown_tables:
+
+markdown_tables
+---------------
+Render the rows of Markdown tables as HTML tables when Markdown data (see :ref:`is_markdown`) is rendered as HTML for
+the ``html`` and ``email`` reports (true/false). Defaults to true.
+
+As reports render Markdown one line at a time, each row of a table would otherwise be shown as a line of text with its
+``|`` separators. A table is a run of consecutive lines containing a ``|`` that includes a separator line between the
+header and the body (e.g. ``|---|---|``, or ``---|---`` as output by the :ref:`html2text` filter), or a run of
+consecutive lines starting and ending with a ``|`` (in a diff, the separator line may be out of context). The rows
+before the separator line are the table's header. In the diffs of the ``unified`` differ each row keeps the colors of
+an added or deleted line, and in those of the ``wdiff`` differ the changed words are marked within their cells.
+
+Set it to false to show each row as a line of text, as in earlier versions (see also :ref:`markdown_padded_tables`):
+
+.. code-block:: yaml
+
+   # yaml-language-server: $schema=jobs.schema.json
+   url: https://example.com/prices.html
+   filters:
+     - html2text:
+   markdown_tables: false
+
+.. versionadded:: NEXT
 
 
 .. _max_tries:

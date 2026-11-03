@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from webchanges.util import chunk_string, get_new_version_number, linkify
+from webchanges.util import (
+    chunk_string,
+    get_new_version_number,
+    is_markdown_table_separator,
+    linkify,
+    markdown_table_runs,
+    split_markdown_table_row,
+)
 
 CHUNK_TEST_DATA = [
     # Numbering for just one item doesn't add the numbers
@@ -83,3 +90,28 @@ def test_get_new_version_number() -> None:
     # '' = running the latest release, True = running a newer-than-released version (e.g. an rc), False = no
     # version information available; a version string means PyPi has a newer release than this code!
     assert version in ('', True, False)
+
+
+@pytest.mark.parametrize(
+    ('lines', 'runs'),
+    [
+        # GFM table with its separator, and one from the html2text filter (no outer pipes)
+        (['text', '| a | b |', '|---|:-:|', '| 1 | 2 |', 'text'], [(1, 4, 2)]),
+        (['a| b', '---|---', '1| 2'], [(0, 3, 1)]),
+        # without a separator (e.g. out of a diff's context), only lines starting and ending with a '|'
+        (['| 1 | 2 |', '| 3 | 4 |'], [(0, 2, None)]),
+        (['Home | About', 'a | b'], []),
+        (['| 1 | 2 |', 'x | y', '| 3 | 4 |'], [(0, 1, None), (2, 3, None)]),
+        (['---', '***'], []),
+    ],
+)
+def test_markdown_table_runs(lines: list[str], runs: list[tuple[int, int, int | None]]) -> None:
+    assert markdown_table_runs(lines) == runs
+
+
+def test_split_markdown_table_row() -> None:
+    assert split_markdown_table_row('| a | b |') == ['a', 'b']
+    assert split_markdown_table_row('a| b ') == ['a', 'b']
+    assert split_markdown_table_row(r'| a \| b | |') == [r'a \| b', '']
+    assert is_markdown_table_separator('| :--- | ---: |')
+    assert not is_markdown_table_separator('| a | --- |')

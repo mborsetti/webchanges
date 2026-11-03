@@ -628,8 +628,13 @@
     },
     "markdown_padded_tables": {
       "type": "boolean",
-      "description": "Show the rows of Markdown tables in a monospace font in HTML reports, so that the columns of tables padded with spaces line up. Set automatically by the html2text filter's pad_tables sub-directive.",
+      "description": "With markdown_tables: false, show the rows of Markdown tables in a monospace font in HTML reports, so that the columns of tables padded with spaces line up. Set automatically by the html2text filter's pad_tables sub-directive.",
       "default": false
+    },
+    "markdown_tables": {
+      "type": "boolean",
+      "description": "Render the rows of Markdown tables as HTML tables when Markdown data is rendered as HTML for the html and email reports (including in the unified and wdiff diffs). False shows each row as a line of text, as in earlier versions.",
+      "default": true
     },
     "monospace": {
       "type": "boolean",

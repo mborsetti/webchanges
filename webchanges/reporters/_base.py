@@ -16,7 +16,15 @@ from zoneinfo import ZoneInfo
 from webchanges import __project_name__, __url__, __version__
 from webchanges._httpx import Headers, h2, httpx2
 from webchanges.jobs import UrlJob
-from webchanges.util import TrackSubClasses, chunk_string, dur_text, mark_to_html, missing_dependency
+from webchanges.util import (
+    TrackSubClasses,
+    chunk_string,
+    dur_text,
+    mark_to_html,
+    markdown_table_runs,
+    markdown_table_to_html,
+    missing_dependency,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -478,11 +486,38 @@ class HtmlReporter(ReporterBase):
 
     @staticmethod
     def markdown_to_html(
-        text: str, markdown_padded_tables: bool | None = None, markdown_extras: dict[str, Any] | None = None
+        text: str,
+        markdown_padded_tables: bool | None = None,
+        markdown_extras: dict[str, Any] | None = None,
+        markdown_tables: bool | None = None,
     ) -> str:
-        """Return an html representation of a markdown string."""
-        return '<br>\n'.join(
-            [mark_to_html(line, markdown_padded_tables, markdown_extras) for line in text.splitlines()]
+        """Return an html representation of a markdown string, converted line by line.
+
+        Unless markdown_tables is false, the rows of Markdown tables are rendered as HTML tables.
+        """
+        lines = text.splitlines()
+        tables = {} if markdown_tables is False else {run[0]: run[1:] for run in markdown_table_runs(lines)}
+        parts: list[tuple[str, bool]] = []  # (HTML, whether it is a table)
+        i = 0
+        while i < len(lines):
+            if i in tables:
+                stop, separator = tables[i]
+                parts.append(
+                    (
+                        markdown_table_to_html(
+                            lines[i:stop], None if separator is None else separator - i, markdown_extras
+                        ),
+                        True,
+                    )
+                )
+                i = stop
+            else:
+                parts.append((mark_to_html(lines[i], markdown_padded_tables, markdown_extras), False))
+                i += 1
+        # lines are separated by <br>, but tables are blocks
+        return ''.join(
+            ('\n' if is_table or parts[k - 1][1] else '<br>\n') + part if k else part
+            for k, (part, is_table) in enumerate(parts)
         )
 
     @staticmethod
@@ -510,7 +545,12 @@ class HtmlReporter(ReporterBase):
 
         def _format_for_return(data: str) -> str:
             if job_state.is_markdown():
-                data = self.markdown_to_html(data, job_state.job.markdown_padded_tables, job_state.job.markdown_extras)
+                data = self.markdown_to_html(
+                    data,
+                    job_state.job.markdown_padded_tables,
+                    job_state.job.markdown_extras,
+                    job_state.job.markdown_tables,
+                )
             elif job_state.is_rst():
                 data = self.rst_to_html(data)
             elif job_state.new_mime_type == 'text/html':

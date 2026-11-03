@@ -183,6 +183,7 @@ class JobBase(metaclass=TrackSubClasses):
     kind: str | None = None  # hooks.py
     markdown_extras: dict[str, Any] | None = None
     markdown_padded_tables: bool | None = None
+    markdown_tables: bool | None = None
     max_tries: int | None = None
     method: Literal['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] | None = None  # UrlJobBase
     mime_type: str | None = None
@@ -758,6 +759,7 @@ class Job(JobBase):
         'kind',  # hooks.py
         'markdown_extras',
         'markdown_padded_tables',
+        'markdown_tables',
         'max_tries',
         'monospace',
         'name',

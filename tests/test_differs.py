@@ -32,6 +32,7 @@ from webchanges.differs import (
     CommandDiffer,
     DifferBase,
     UnifiedDiffer,
+    WdiffDiffer,
     _ai_google_post_with_retry,
     _ai_google_retry_delay,
     _ai_google_retry_wait,
@@ -131,7 +132,6 @@ DIFF_TO_HTML_TEST_DATA = [
     (' _emphasis_', '<td><em>emphasis</em></td>'),
     (' snake_case_name', '<td>snake_case_name</td>'),
     (' snake*case*name', '<td>snake*case*name</td>'),
-    (' | table | row |', '<td>| table | row |</td>'),
 ]
 
 
@@ -466,12 +466,36 @@ def test_unified_diff_to_html(inpt: str, out: str, job_state: JobState) -> None:
 def test_unified_diff_to_html_padded_table(job_state: JobState) -> None:
     # must add to fake headers to get what we want:
     inpt = '-fake head 1\n+fake head 2\n | table | row |'
-    job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True, 'markdown_padded_tables': True})
+    job = JobBase.unserialize(
+        {
+            'url': 'https://www.example.com',
+            'is_markdown': True,
+            'markdown_padded_tables': True,
+            'markdown_tables': False,  # the table row is a line as any other
+        }
+    )
     job_state.job = job
     result = ''.join(list(UnifiedDiffer(job_state).unified_diff_to_html(inpt)))
     assert result[193:-8] == (
         '<tr><td><span style="font-family:monospace;white-space:pre-wrap">| table | row |</span></td></tr>'
     )
+
+
+def test_unified_diff_to_html_markdown_table(job_state: JobState) -> None:
+    """Markdown table rows are rendered as a nested HTML table, each row styled as its diff line."""
+    inpt = '-fake head 1\n+fake head 2\n | Model | Price |\n |---|---|\n-| A | $1 |\n+| A | $3 |\n text'
+    job_state.job = JobBase.unserialize({'url': 'https://www.example.com', 'is_markdown': True})
+    result = ''.join(UnifiedDiffer(job_state).unified_diff_to_html(inpt))
+    cell = 'border:1px solid #999;padding:2px 6px;vertical-align:top;'
+    deleted = f'{cell}{UnifiedDiffer.css_deltd_style}'
+    added = f'{cell}{UnifiedDiffer.css_added_style}'
+    assert (
+        '<tr><td><table style="border-collapse:collapse;">'
+        f'<tr><th style="{cell}">Model</th><th style="{cell}">Price</th></tr>'
+        f'<tr><td style="{deleted}">A</td><td style="{deleted}">$1</td></tr>'
+        f'<tr><td style="{added}">A</td><td style="{added}">$3</td></tr>'
+        '</table></td></tr><tr><td>text</td></tr></table>'
+    ) in result
 
 
 def test_unified_diff_to_html_markdown_extras(job_state: JobState) -> None:
@@ -1714,6 +1738,53 @@ def test_wdiff_context_lines(color: bool, changed_line: str, job_state: JobState
     job_state.new_data = job_state.old_data.replace('line 5', 'line five')
     job_state.job.differ = {'name': 'wdiff', 'color': color, 'context_lines': 1}
     assert job_state.get_diff().splitlines()[2:] == ['@@ 1...4 @@', 'line 4', changed_line, 'line 6', '@@ 8...10 @@']
+
+
+@pytest.mark.parametrize('mime_type', ['text/plain', 'text/markdown'])
+def test_wdiff_context_lines_html(mime_type: str, job_state: JobState) -> None:
+    """Test that the range information lines of the HTML diff are styled as those of the unified differ."""
+    job_state.old_data = ''.join(f'line {i}\n' for i in range(10))
+    job_state.new_data = job_state.old_data.replace('line 5', 'line five')
+    job_state.old_mime_type = job_state.new_mime_type = mime_type
+    job_state.job.differ = {'name': 'wdiff', 'context_lines': 1}
+    lines = job_state.get_diff(report_kind='html').splitlines()[2:]
+    assert lines[0] == f'<span style="{WdiffDiffer.css_range_style}">@@ 1...4 @@</span><br>'
+    assert lines[-1] == f'<span style="{WdiffDiffer.css_range_style}">@@ 8...10 @@</span>'
+
+
+def test_wdiff_markdown_table(job_state: JobState) -> None:
+    """Markdown table rows are rendered as an HTML table, a change spanning cells being split at their boundaries."""
+    job_state.old_data = 'Prices\n| Model | Price |\n| A | $1 |\nEnd'
+    job_state.new_data = 'Prices\n| Model | Price |\n| A | $3 |\n| B | $4 |\nEnd'
+    job_state.old_mime_type = job_state.new_mime_type = 'text/markdown'
+    job_state.job.differ = {'name': 'wdiff'}
+    cell = 'border:1px solid #999;padding:2px 6px;vertical-align:top;'
+    deleted = f'<span style="{WdiffDiffer.css_deltd_style}">'
+    added = f'<span style="{WdiffDiffer.css_added_style}">'
+    assert job_state.get_diff(report_kind='html').splitlines()[2:] == [
+        'Prices<br>',
+        (
+            '<table style="border-collapse:collapse;">'
+            f'<tr><td style="{cell}">Model</td><td style="{cell}">Price</td></tr>'
+            f'<tr><td style="{cell}">A</td><td style="{cell}">{deleted}$1</span> {added}$3</span></td></tr>'
+            f'<tr><td style="{cell}">{added}B</span></td><td style="{cell}">{added}$4</span></td></tr>'
+            '</table>'
+        ),
+        'End',
+    ]
+
+
+def test_wdiff_markdown_table_cells() -> None:
+    """A change span open at a cell boundary is closed in its cell and reopened in the next one."""
+    add, rem = '<span a>', '<span r>'
+    assert WdiffDiffer.markdown_table_cells(f'{add}| x | y |</span>', add, rem) == [
+        f'{add}x</span>',
+        f'{add}y</span>',
+    ]
+    assert WdiffDiffer.markdown_table_cells(f'| {rem}a</span> {add}b</span> | c \\| d |', add, rem) == [
+        f'{rem}a</span> {add}b</span>',
+        'c \\| d',
+    ]
 
 
 def test_wdiff_markdown_html_line_by_line(job_state: JobState) -> None:

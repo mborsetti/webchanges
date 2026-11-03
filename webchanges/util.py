@@ -40,7 +40,7 @@ import platformdirs
 from webchanges import __project_name__, __version__
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Sequence
     from pathlib import Path
     from types import ModuleType
 
@@ -545,6 +545,114 @@ def mark_to_html(
         return pre + html_out + post
     html_out = re.sub(r'<(/?)h\d>', r'<\g<1>strong>', html_out)  # replace heading tags with <strong>
     return pre + html_out + post
+
+
+# Markdown tables in HTML reports. Reports convert Markdown to HTML one line at a time (see mark_to_html()), so a
+# table's rows are found by markdown_table_runs() and rendered by the caller (HtmlReporter.markdown_to_html() and the
+# unified and wdiff differs) as an HTML table with markdown_table_html(), unless the job's markdown_tables is false.
+MARKDOWN_TABLE_STYLE = 'border-collapse:collapse;'
+MARKDOWN_TABLE_CELL_STYLE = 'border:1px solid #999;padding:2px 6px;vertical-align:top;'
+
+
+def is_markdown_table_separator(line: str) -> bool:
+    """Whether a line separates the header of a Markdown table from its body.
+
+    E.g. ``|---|:--:|``, or ``---|---`` as output by the html2text filter.
+
+    :param line: The line.
+    :returns: True if it is.
+    """
+    return '|' in line and '-' in line and not line.strip(' \t|:-')
+
+
+def markdown_table_runs(lines: Sequence[str]) -> list[tuple[int, int, int | None]]:
+    """Find the runs of lines forming Markdown tables.
+
+    A table is either a run of consecutive lines containing a ``|`` that includes a separator line (see
+    is_markdown_table_separator()), such as the tables of the html2text filter, or a run of consecutive lines starting
+    and ending with a ``|`` (in a diff, the separator line may be out of context).
+
+    :param lines: The lines of Markdown text (in a diff, without their diff markers).
+    :returns: For each table, the index of its first line, the index after its last line, and the index of its
+       separator line (None if it has none); the lines before the separator are the table's header.
+    """
+    runs: list[tuple[int, int, int | None]] = []
+    i = 0
+    while i < len(lines):
+        if '|' not in lines[i]:
+            i += 1
+            continue
+        start = i
+        while i < len(lines) and '|' in lines[i]:
+            i += 1
+        separator = next((j for j in range(start, i) if is_markdown_table_separator(lines[j])), None)
+        if separator is not None:
+            runs.append((start, i, separator))
+            continue
+        j = start
+        while j < i:  # without a separator, only the lines starting and ending with a '|'
+            if (stripped := lines[j].strip()).startswith('|') and stripped.endswith('|'):
+                piped_start = j
+                while j < i and (stripped := lines[j].strip()).startswith('|') and stripped.endswith('|'):
+                    j += 1
+                runs.append((piped_start, j, None))
+            else:
+                j += 1
+    return runs
+
+
+def split_markdown_table_row(line: str) -> list[str]:
+    r"""Split a row of a Markdown table into its cells, which are stripped of whitespace.
+
+    :param line: The row, e.g. ``| a | b |`` or ``a| b``; an escaped ``\|`` is not a cell boundary.
+    :returns: The cells.
+    """
+    row = line.strip()
+    row = row.removeprefix('|')
+    if row.endswith('|') and not row.endswith('\\|'):
+        row = row[:-1]
+    return [cell.strip() for cell in re.split(r'(?<!\\)\|', row)]
+
+
+def markdown_table_html(rows: Iterable[tuple[Sequence[str], bool, str]]) -> str:
+    """Render the rows of a Markdown table as an HTML table, with inline styles (for e-mail clients).
+
+    :param rows: For each row, the HTML of its cells, whether it is a header row, and a style for its cells (e.g.
+       the colors of an added line in a diff; can be empty).
+    :returns: The HTML table, on one line (callers may turn newlines into <br>).
+    """
+    html_rows = []
+    for cells, is_header, style in rows:
+        tag = 'th' if is_header else 'td'
+        html_rows.append(
+            '<tr>' + ''.join(f'<{tag} style="{MARKDOWN_TABLE_CELL_STYLE}{style}">{c}</{tag}>' for c in cells) + '</tr>'
+        )
+    return f'<table style="{MARKDOWN_TABLE_STYLE}">{"".join(html_rows)}</table>'
+
+
+def markdown_table_to_html(
+    lines: Sequence[str],
+    separator: int | None,
+    extras: Iterable[str] | dict[str, Any] | None = None,
+    styles: Sequence[str] | None = None,
+) -> str:
+    """Render the lines of a Markdown table (one of the runs found by markdown_table_runs()) as an HTML table.
+
+    :param lines: The table's lines.
+    :param separator: The index of its separator line in lines (dropped; the lines before it are the header), or None.
+    :param extras: The markdown2 extras used to convert each cell (see mark_to_html()).
+    :param styles: A style for the cells of each line (e.g. the colors of the added lines in a diff), or None.
+    :returns: The HTML table, on one line.
+    """
+    return markdown_table_html(
+        (
+            [mark_to_html(cell, extras=extras) for cell in split_markdown_table_row(line)],
+            j < (separator or 0),
+            styles[j] if styles else '',
+        )
+        for j, line in enumerate(lines)
+        if j != separator
+    )
 
 
 # Optional dependencies are imported inside the functions that use them, so that start-up only pays for what a run
