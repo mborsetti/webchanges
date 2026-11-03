@@ -2766,10 +2766,12 @@ class WdiffDiffer(DifferBase):
         if self.state.is_markdown():
             diff_text = diff_text.replace('</s>', ' ')
             diff_html = diff_html.replace('</s>', ' ')
-            diff_html = (
-                mark_to_html(diff_html, self.job.markdown_padded_tables, self.job.markdown_extras)
-                .replace('<p>', '')
-                .replace('</p>', '')
+            # Line by line, as the unified differ does: in Markdown from the html2text filter (single_line_break) each
+            # line is a block of its own, and mark_to_html() handles list items, indentation, '* * *' and headings
+            # only at the start of the text it is given
+            diff_html = '\n'.join(
+                mark_to_html(line, self.job.markdown_padded_tables, self.job.markdown_extras)
+                for line in diff_html.splitlines()
             )
 
         if self.job.monospace:

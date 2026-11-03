@@ -1716,6 +1716,30 @@ def test_wdiff_context_lines(color: bool, changed_line: str, job_state: JobState
     assert job_state.get_diff().splitlines()[2:] == ['@@ 1...4 @@', 'line 4', changed_line, 'line 6', '@@ 8...10 @@']
 
 
+def test_wdiff_markdown_html_line_by_line(job_state: JobState) -> None:
+    """Test that wdiff renders multi-line Markdown to HTML line by line, as the unified differ does.
+
+    In html2text output each line is a block of its own; converted as one text, list items stayed as literal '* ',
+    indentation was lost, headings became <h2> and '* * *' an <hr>.
+    """
+    job_state.old_data = '## Title\n  * item one\n    * nested two\n    indented\n* * *\nLast'
+    job_state.new_data = job_state.old_data.replace('two', '2')
+    job_state.old_mime_type = job_state.new_mime_type = 'text/markdown'
+    job_state.job.differ = {'name': 'wdiff'}
+    assert job_state.get_diff(report_kind='html').splitlines()[2:] == [
+        '<strong>Title</strong><br>',
+        '&nbsp;&nbsp;● item one<br>',
+        (
+            '&nbsp;&nbsp;&nbsp;&nbsp;⯀ nested <span style="background-color:#fff0f0;color:#9c1c1c;'
+            'text-decoration:line-through;">two</span> <span style="background-color:#d1ffd1;color:#082b08;">2</span>'
+            '<br>'
+        ),
+        '&nbsp;&nbsp;&nbsp;&nbsp;indented<br>',
+        f'{"-" * 80}<br>',
+        'Last',
+    ]
+
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Google AI (Gemini) transient-error retry logic
 # ---------------------------------------------------------------------------------------------------------------------

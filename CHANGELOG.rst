@@ -98,6 +98,9 @@ Fixed
 * ``ai_google`` differ: Improved retry error messages.
 * ``wdiff`` differ: With ``color: false``, text reports of data with more lines than ``context_lines`` showed no
   changes at all, only a ``@@`` line for the whole data.
+* ``wdiff`` differ: HTML reports of Markdown data (e.g. from the ``html2text`` filter) are now rendered line by line,
+  as with the ``unified`` differ. List items were shown as literal ``*`` with their indentation lost, as were indented
+  lines; headings were rendered at full size, and ``* * *`` as a horizontal rule (which separates jobs in reports).
 * ``--features`` listed the ``deepdiff`` and ``wdiff`` differs without a description ("None"), and broke the
   descriptions of the ``beautify`` and ``xmltoyaml`` filters mid-sentence.
 
