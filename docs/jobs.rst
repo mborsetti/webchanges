@@ -597,19 +597,6 @@ Please see :ref:`here  <conditional_requests>` to learn more about how :program:
 to improve performance and reduce bandwidth usage.
 
 
-.. _timeout:
-
-timeout
-^^^^^^^
-Override the default timeout, in seconds (a number). The default is 60 seconds for ``url`` jobs unless they have the
-directive ```use_browser: true``, in which case it's 90 seconds. If set to 0, timeout is disabled.
-
-See example :ref:`here <timeout>`.
-
-.. versionchanged:: 3.0
-   Works for all ``url`` jobs, including those with ``use_browser: true``.
-
-
 .. _same_site_delay:
 
 same_site_delay
@@ -631,6 +618,20 @@ the easiest way to protect all your sites at once.
 .. versionchanged:: 3.37
    Makes configurable, and off by default, the previously automatic (random 0.1 to 1.0 second) delaying of jobs
    sharing a network location.
+
+
+.. _timeout:
+
+timeout
+^^^^^^^
+Override the default timeout, in seconds (a number). The default is 60 seconds for ``url`` jobs unless they have the
+directive ```use_browser: true``, in which case it's 90 seconds. If set to 0, timeout is disabled.
+
+See example :ref:`here <timeout>`.
+
+.. versionchanged:: 3.0
+   Works for all ``url`` jobs, including those with ``use_browser: true``.
+
 
 
 Optional directives for ``url`` jobs without ``use_browser: true``
