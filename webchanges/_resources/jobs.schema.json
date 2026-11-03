@@ -338,7 +338,14 @@
     },
     "wait_until": {
       "type": "string",
-      "enum": ["load", "domcontentloaded", "networkidle", "commit"],
+      "anyOf": [
+        { "enum": ["load", "domcontentloaded", "networkidle", "commit"] },
+        {
+          "enum": ["networkidle0", "networkidle2"],
+          "deprecated": true,
+          "deprecationMessage": "Use 'networkidle' instead of 'networkidle0' or 'networkidle2'."
+        }
+      ],
       "description": "Navigation completion event to wait for (browser jobs).",
       "default": "load"
     },

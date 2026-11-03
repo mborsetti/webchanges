@@ -354,6 +354,13 @@ class YamlConfigStorage(BaseYamlFileStorage):
                     config['job_defaults'][job_defaults_type]['cookies'] = cookies_from_dict(
                         config['job_defaults'][job_defaults_type]['cookies']
                     )
+
+            # check the job directives of job_defaults (cookies being now strings), so that the jobs, checked when
+            # loaded, need no checking once with_defaults() has applied the defaults to them
+            try:
+                JobBase.validate_job_defaults(cast('dict[str, Any]', config['job_defaults']))
+            except ValueError as exc:
+                raise ValueError(f'{exc}\n(in configuration file {self.filename})') from None
             logger.info('Loaded configuration from %s', self.filename)
 
         else:

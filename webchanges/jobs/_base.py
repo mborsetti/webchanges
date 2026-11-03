@@ -14,7 +14,7 @@ import os
 import re
 import textwrap
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, get_type_hints
+from typing import TYPE_CHECKING, Any, Literal, cast, get_type_hints
 from urllib.parse import urlsplit
 
 import yaml
@@ -35,7 +35,7 @@ except ImportError:
 
 # https://stackoverflow.com/questions/39740632
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
     from pathlib import Path
 
     from webchanges.handler import JobState
@@ -160,7 +160,9 @@ class JobBase(metaclass=TrackSubClasses):
     filters: FiltersList | list[FiltersList | dict[str, Any]] | None = None
     fingerprints: dict[str, str | dict[str, Any]] | None = None  # UrlJob (curl_cffi backend only)
     guid: str = ''
-    headers = Headers(encoding='utf-8')  # UrlJobBase; shared by all jobs not setting it: never mutate it in place
+    # UrlJobBase; unserialize() turns the YAML dict into Headers; the default is shared by all jobs not setting it:
+    # never mutate it in place
+    headers: Headers = Headers(encoding='utf-8')
     hook_data: Any = None  # hooks.py
     http_client: Literal['httpx2', 'requests', 'curl_cffi', 'httpx'] | None = None  # UrlJob ('httpx' = 'httpx2')
     http_version: Literal['v1', 'v2', 'v2tls', 'v2_prior_knowledge', 'v3', 'v3only'] | None = None  # UrlJob
@@ -300,8 +302,13 @@ class JobBase(metaclass=TrackSubClasses):
         d.pop('index_number', None)
         return d
 
-    def validate(self) -> None:
-        """Checks all instance attributes against class type hints."""
+    def validate(self, defaults_section: str | None = None) -> None:
+        """Checks all instance attributes against class type hints.
+
+        :param defaults_section: The job_defaults section of the configuration that the directives come from, if
+           validating those (see :py:meth:`validate_defaults`).
+        :raises ValueError: If a directive has a wrong type.
+        """
         # Pulls the annotations defined at the class level
         hints = get_type_hints(self.__class__)
 
@@ -314,10 +321,75 @@ class JobBase(metaclass=TrackSubClasses):
             try:
                 check_type(current_value, expected_type)
             except TypeCheckError as exc:
+                raise self.directive_error(attr_name, str(exc), defaults_section) from None
+
+    def directive_error(self, name: str, message: str, defaults_section: str | None = None) -> ValueError:
+        """Returns the error to raise for a directive with a wrong value.
+
+        :param name: The name of the directive.
+        :param message: What is wrong with it.
+        :param defaults_section: The job_defaults section of the configuration that the directive comes from, if any.
+        :returns: The ValueError.
+        """
+        if defaults_section:
+            return ValueError(f"Error in directive '{name}' of job_defaults '{defaults_section}': {message}")
+        return ValueError(
+            f"Error in directive '{name}' of job {self.index_number}: {message}\n\n{yaml.safe_dump(self.serialize())}"
+        )
+
+    @classmethod
+    def validate_defaults(cls, defaults: Mapping[str, Any] | None, section: str) -> None:
+        """Checks the directives of a job_defaults section of the configuration that apply to this kind of job.
+
+        A job valid on its own stays valid once valid defaults are applied to it, as they never replace any of its
+        directives, and dict ones (e.g. headers) are merged key by key: so jobs need no checking after with_defaults().
+
+        :param defaults: The job_defaults section.
+        :param section: The name of the section (e.g. 'browser_jobs'), for error messages.
+        :raises ValueError: If a directive has a wrong type or value.
+        """
+        directives = {
+            key: value for key, value in (defaults or {}).items() if key in cls.__optional__ and value is not None
+        }
+        if directives:
+            placeholders = {'url': 'https://example.com/', 'use_browser': True, 'command': 'true'}
+            job = cls(**{key: placeholders.get(key, '') for key in cls.__required__}, **directives)
+            job.validate(defaults_section=section)
+
+    @staticmethod
+    def validate_job_defaults(job_defaults: Mapping[str, Any]) -> None:
+        """Checks the job_defaults of the configuration, as unserialize() checks the jobs.
+
+        The names in each section must be directives that with_defaults() applies to at least one of the kinds of jobs
+        that the section applies to, including those defined in hooks.py; the values are then checked against the
+        directives of the url, browser and command jobs (see :py:meth:`validate_defaults`).
+
+        :param job_defaults: The job_defaults of the configuration, with headers and cookies already formatted.
+        :raises ValueError: If a directive is unrecognized, cannot be set in job_defaults, or has a wrong value.
+        """
+        from webchanges.jobs import BrowserJob, ShellJob, UrlJob
+
+        # the registry holds classes (it is typed as holding instances)
+        kinds = [cast('type[JobBase]', job_class) for kind, job_class in JobBase.__subclasses__.items() if kind]
+        sections = {f'{job_class.__kind__}_jobs': job_class for job_class in (UrlJob, BrowserJob, ShellJob)}
+        for section in ('all_jobs', *sections):
+            job_classes = kinds if section == 'all_jobs' else [c for c in kinds if issubclass(c, sections[section])]
+            optional = {name for job_class in job_classes for name in job_class.__optional__}
+            for name in job_defaults.get(section) or {}:
+                if name.startswith('_') or name in optional:  # a remark, or a directive that can be defaulted
+                    continue
+                if any(name in job_class.__required__ for job_class in job_classes):
+                    raise ValueError(
+                        f"Directive '{name}' of job_defaults '{section}' cannot be set in job_defaults; set it in "
+                        'each job instead.'
+                    )
                 raise ValueError(
-                    f"Error in directive '{attr_name}' of job {self.index_number}:\n{exc}\n\n"
-                    f'{yaml.safe_dump(self.serialize())}'
-                ) from None
+                    f"Directive '{name}' of job_defaults '{section}' is unrecognized. Please check for typos or refer "
+                    'to the documentation.'
+                )
+        for section, job_class in sections.items():
+            job_class.validate_defaults(job_defaults.get(section), section)
+            job_class.validate_defaults(job_defaults.get('all_jobs'), 'all_jobs')
 
     @classmethod
     def unserialize(cls, data: dict, filenames: list[Path] | None = None) -> JobBase:
@@ -354,12 +426,16 @@ class JobBase(metaclass=TrackSubClasses):
 
         job = job_subclass.from_dict(data, filenames)
 
+        # Headers as read from YAML (a dict, or null for none) become a Headers object, which validate() requires
+        if isinstance(job.headers, dict):
+            job.headers = headers_from_dict(job.headers)
+        elif job.headers is None:
+            job.headers = Headers(encoding='utf-8')
+
         # Make sure all the types are correct
         job.validate()
 
-        # Format headers and cookies (and turn values into strings to avoid httpx2 Exception):
-        if isinstance(job.headers, dict):
-            job.headers = headers_from_dict(job.headers)
+        # Format cookies (turn values into strings to avoid httpx2 Exception):
         if isinstance(job.cookies, dict):
             job.cookies = cookies_from_dict(job.cookies)
 
@@ -419,6 +495,22 @@ class JobBase(metaclass=TrackSubClasses):
                 "Job directive 'wait_for' is deprecated: replace it with 'wait_for_selector' (job %s)", data.get('url')
             )
             data['wait_for_selector'] = data.pop('wait_for')
+        # Pyppeteer's values of 'wait_until', replaced by Playwright's 'networkidle' in 3.10
+        if data.get('wait_until') in {'networkidle0', 'networkidle2'}:
+            logger.warning(
+                "Job directive 'wait_until: %s' is deprecated: replace it with 'wait_until: networkidle' (job %s)",
+                data['wait_until'],
+                data.get('url'),
+            )
+            data['wait_until'] = 'networkidle'
+        # Pyppeteer's 'wait_for_navigation', replaced by Playwright's 'wait_for_url'
+        if isinstance(data.get('wait_for_navigation'), str):
+            logger.warning(
+                "Job directive 'wait_for_navigation' is deprecated: replace it with 'wait_for_url' (job %s)",
+                data.get('url'),
+            )
+            wait_for_navigation = data.pop('wait_for_navigation')
+            data.setdefault('wait_for_url', wait_for_navigation)
 
         # Backwards-compatible with diff_tool
         if data.get('diff_tool') and not data.get('differ'):
@@ -847,20 +939,14 @@ class UrlJobBase(Job):
             logger.debug('Job %s: Not sending cookie(s) set to null: %s', self.index_number, removed)
         return cookies or None
 
-    def get_headers(
-        self,
-        job_state: JobState,
-        user_agent: str | None = __user_agent__,
-        include_cookies: bool = True,
-    ) -> Headers:
-        """Get the headers, adding cookies and the conditional request ones.
+    def get_headers(self, job_state: JobState, user_agent: str | None = __user_agent__) -> Headers:
+        """Get the headers, adding the conditional request ones (cookies are passed to the client by get_cookies()).
 
         Headers set to null (removed) are dropped first; then, if there is no `User-Agent`, either the default one or
         `user_agent` is added.
 
         :param job_state: The job state.
         :param user_agent: The user agent string.
-        :include_cookies: Whether to include cookies (from `get_cookies()`) as a `Cookie` header.
 
         :returns: The headers.
         """
@@ -871,16 +957,6 @@ class UrlJobBase(Job):
                 del headers[name]
         if 'User-Agent' not in headers and user_agent:
             headers['User-Agent'] = user_agent
-        if include_cookies and (cookies := self.get_cookies()):
-            if 'Cookie' in headers:
-                warnings.warn(
-                    f"Job {self.index_number}: Found both a header 'Cookie' and a directive 'cookies'; "
-                    f"please specify only one of them (using content of the cookies 'directive') "
-                    f'( {self.get_indexed_location()} ).',
-                    RuntimeWarning,
-                    stacklevel=1,
-                )
-            headers['Cookie'] = '; '.join([f'{k}={v}' for k, v in cookies.items()])
         if self.no_conditional_request:
             headers.pop('If-Modified-Since', None)
             headers.pop('If-None-Match', None)

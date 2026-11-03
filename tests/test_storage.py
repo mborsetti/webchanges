@@ -13,6 +13,7 @@ import copy
 import importlib.util
 import logging
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -329,6 +330,74 @@ def _write_config_job_defaults(tmp_path: Path, job_defaults: dict) -> Path:
     out = tmp_path / 'config.yaml'
     out.write_text(yaml.safe_dump(base), encoding='utf-8')
     return out
+
+
+@pytest.mark.parametrize(
+    ('job_defaults', 'message'),
+    [
+        (
+            {'browser_jobs': {'wait_for_timeout': True}},
+            "Error in directive 'wait_for_timeout' of job_defaults 'browser_jobs': must be a number of seconds",
+        ),
+        ({'all_jobs': {'block_elements': 'image'}}, "Error in directive 'block_elements' of job_defaults 'all_jobs':"),
+        ({'url_jobs': {'timeout': 'soon'}}, "Error in directive 'timeout' of job_defaults 'url_jobs':"),
+    ],
+    ids=['value', 'type-in-all_jobs', 'type-in-url_jobs'],
+)
+def test_load_invalid_job_defaults(tmp_path: Path, job_defaults: dict, message: str) -> None:
+    """The job directives of job_defaults are checked when the configuration is loaded, as the jobs' are."""
+    cfg = _write_config_job_defaults(tmp_path, job_defaults)
+    with pytest.raises(ValueError, match=re.escape(message)):
+        YamlConfigStorage(cfg).load()
+
+
+@pytest.mark.parametrize(
+    ('job_defaults', 'message'),
+    [
+        ({'url_jobs': {'timout': 30}}, "Directive 'timout' of job_defaults 'url_jobs' is unrecognized"),
+        ({'all_jobs': {'timout': 30}}, "Directive 'timout' of job_defaults 'all_jobs' is unrecognized"),
+        # a browser job directive, which url jobs do not have
+        ({'url_jobs': {'wait_for_timeout': 2}}, "Directive 'wait_for_timeout' of job_defaults 'url_jobs' is unrecog"),
+        ({'browser_jobs': {'use_browser': 'firefox'}}, "'use_browser' of job_defaults 'browser_jobs' cannot be set in"),
+    ],
+    ids=['typo', 'typo-in-all_jobs', 'other-kind', 'required'],
+)
+def test_load_unrecognized_job_defaults(tmp_path: Path, job_defaults: dict, message: str) -> None:
+    """A directive that job_defaults cannot apply is reported, with the configuration file, instead of ignored."""
+    cfg = _write_config_job_defaults(tmp_path, job_defaults)
+    with pytest.raises(ValueError, match=re.escape(message)) as exc_info:
+        YamlConfigStorage(cfg).load()
+    assert str(cfg) in str(exc_info.value)
+
+
+def test_load_job_defaults_of_hooks_job_kind(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A directive of a job kind defined in hooks.py is recognized in all_jobs, and in its base kind's section."""
+    monkeypatch.setattr(JobBase, '__subclasses__', dict(JobBase.__subclasses__))  # registration is undone afterwards
+
+    class HooksUrlJob(UrlJob):
+        __kind__ = 'hooks_test_url'
+        __optional__ = ('my_directive',)
+
+    cfg = _write_config_job_defaults(
+        tmp_path, {'all_jobs': {'my_directive': 1, '_note': 'a remark'}, 'url_jobs': {'my_directive': 2}}
+    )
+    YamlConfigStorage(cfg).load()
+    cfg = _write_config_job_defaults(tmp_path, {'command_jobs': {'my_directive': 3}})
+    with pytest.raises(ValueError, match="Directive 'my_directive' of job_defaults 'command_jobs' is unrecognized"):
+        YamlConfigStorage(cfg).load()
+
+
+def test_load_valid_job_defaults(tmp_path: Path) -> None:
+    """In all_jobs, a directive is checked only against the kinds of jobs having it."""
+    cfg = _write_config_job_defaults(
+        tmp_path,
+        {
+            'all_jobs': {'timeout': 30, 'block_elements': ['image'], 'cookies': {'consent': 1}},
+            'browser_jobs': {'wait_for_timeout': 1.5},
+            'command_jobs': {'stderr': 'forward'},
+        },
+    )
+    YamlConfigStorage(cfg).load()
 
 
 def test_load_legacy_job_defaults_keys(tmp_path: Path) -> None:

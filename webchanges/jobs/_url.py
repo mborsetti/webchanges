@@ -265,7 +265,7 @@ class UrlJob(UrlJobBase):
         :param final_url: The URL after the initialization request completed (after redirects).
         :returns: The resolved URL to use for the main request.
         """
-        init_url_params = dict(parse_qsl(urlparse(final_url).params))
+        init_url_params = dict(parse_qsl(urlparse(final_url).params, separator=';'))
         try:
             url = self.url.format(**init_url_params)
         except KeyError as e:
@@ -576,7 +576,6 @@ class UrlJob(UrlJobBase):
 
         session_kwargs: dict[str, Any] = {
             'headers': headers,
-            'cookies': self.get_cookies(),
             'proxies': proxies,
             'verify': (not self.ssl_no_verify),
             'timeout': timeout,
@@ -605,6 +604,11 @@ class UrlJob(UrlJobBase):
             logger.info('Job %s: curl_cffi fingerprints applied: %s', self.index_number, sorted(self.fingerprints))
 
         with curl_cffi_requests.Session(**session_kwargs) as session:
+            # curl gives a cookie without a domain to the first host it reaches, so url would not get it after an
+            # initialization_url on another host: set them for both hosts
+            for host in {urlsplit(location).hostname for location in filter(None, (self.url, self.initialization_url))}:
+                for name, value in (self.get_cookies() or {}).items():
+                    session.cookies.set(name, value, domain=host)
             url = self.url
             if self.initialization_url:
                 logger.info('Job %s: Initializing by navigating to %s', self.index_number, self.initialization_url)
@@ -683,7 +687,7 @@ class UrlJob(UrlJobBase):
         # curl_cffi sends the impersonated browser's User-Agent, which webchanges' own would contradict (bot walls
         # check that it matches the TLS fingerprint and the sec-ch-ua client hints)
         user_agent = None if job_state._http_client_used == 'curl_cffi' else __user_agent__
-        headers = self.get_headers(job_state, include_cookies=False, user_agent=user_agent)
+        headers = self.get_headers(job_state, user_agent=user_agent)
         self._prepare_request_data(headers)
 
         # if self.headers:

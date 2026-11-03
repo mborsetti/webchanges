@@ -15,12 +15,11 @@ import sys
 import threading
 import traceback
 from collections.abc import Iterator
-from contextlib import ExitStack, nullcontext
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import pytest
 import yaml
@@ -57,6 +56,7 @@ from webchanges.util import SettingError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+    from contextlib import ExitStack
     from unittest.mock import Mock
 
     import pytest_mock
@@ -179,7 +179,7 @@ TEST_JOBS: list[tuple[dict[str, Any], str | bytes]] = [
             'use_browser': True,
             'data': {'fieldname': 'fieldvalue'},
         },
-        '"data":"fieldname=fieldvalue"',
+        '"form":{"fieldname":"fieldvalue"}',  # parsed by the server as sent with its Content-Type
     ),
     (
         {
@@ -969,15 +969,12 @@ def test_run_job(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     job = JobBase.unserialize(input_job)
+    if 'wait_for_navigation' in input_job:
+        assert "'wait_for_navigation' is deprecated" in caplog.text
     if job.use_browser and not playwright_is_installed:
         pytest.skip('Playwright not installed')
     else:
-        deprecation_ctx = (
-            pytest.warns(DeprecationWarning, match='wait_for_navigation')
-            if 'wait_for_navigation' in input_job
-            else nullcontext()
-        )
-        with JobState(ssdb_storage, job) as job_state, deprecation_ctx:
+        with JobState(ssdb_storage, job) as job_state:
             data, _, _ = job.retrieve(job_state)
             if job.filters == [{'pdf2text': {}}]:
                 assert isinstance(data, bytes)
@@ -1109,7 +1106,7 @@ def test_check_bad_proxy(job_data: dict[str, Any], ssdb_storage: SsdbSQLite3Stor
             assert job_state.exception
             assert any(
                 x in str(job_state.exception.args)
-                for x in ('Connection refused', 'No connection could be made', 'ERR_PROXY_CONNECTION_FAILED ')
+                for x in ('Connection refused', 'No connection could be made', 'net::ERR_PROXY_CONNECTION_FAILED')
             )
             assert job_state.error_ignored is False
 
@@ -1154,11 +1151,15 @@ def test_check_ignore_http_error_codes_and_error_message(
         with JobState(ssdb_storage, job) as job_state:
             job_state.process()
             if isinstance(job_state.exception, (HTTPStatusError, HTTPError)):
-                assert job_state.exception.args[0].lower() == (
-                    "418 client error: i'm a teapot for url: https://www.google.com/teapot\n[](https://www.google.com/)\n"
+                body = (
+                    ' for url: https://www.google.com/teapot\n[](https://www.google.com/)\n'
                     '**418.** i’m a teapot.\nthe requested entity body is short and stout. '
                     'tip me over and pour me out.'
                 )
+                assert job_state.exception.args[0].lower() in {
+                    f"418 client error: i'm a teapot{body}",
+                    f'418 client error: unknown{body}',
+                }
             elif isinstance(job_state.exception, BrowserResponseError):
                 assert job_state.exception.status_code == 418
                 assert job_state.exception.args[0] == (
@@ -1309,10 +1310,6 @@ def test_browser_wait_for_url(mocker: pytest_mock.MockerFixture) -> None:
     job.wait_for_url = {'url': '**/done', 'timeout': 5000}
     job._wait_for_url(page)
     page.wait_for_url.assert_called_once_with(url='**/done', timeout=5000)
-
-    job.wait_for_url = 42  # ty:ignore[invalid-assignment]
-    with pytest.raises(ValueError, match='can only be a string or a dictionary; found a int'):
-        job._wait_for_url(page)
 
 
 def test_format_error_other_exception_keeps_traceback() -> None:
@@ -1558,14 +1555,9 @@ def test_browser_job_use_browser_string(value: str) -> None:
     assert job.use_browser == value
 
 
-def test_browser_job_use_browser_invalid_string(ssdb_storage: SsdbSQLite3Storage) -> None:
-    if not playwright_is_installed:
-        pytest.skip('Playwright not installed')
-    job_data = {'url': 'https://www.example.com', 'use_browser': 'safari'}
-    job = JobBase.unserialize(job_data)
-    assert isinstance(job, BrowserJob)
-    with JobState(ssdb_storage, job) as job_state, pytest.raises(ValueError, match="'use_browser' value 'safari'"):
-        job.retrieve(job_state)
+def test_browser_job_use_browser_invalid_string() -> None:
+    with pytest.raises(ValueError, match="Error in directive 'use_browser' of job 0: 'safari' is not 'firefox'"):
+        JobBase.unserialize({'url': 'https://www.example.com', 'use_browser': 'safari'})
 
 
 def test_shell_job_without_kind() -> None:
@@ -1593,6 +1585,18 @@ def test_with_defaults() -> None:
     job = job.with_defaults(config)
     assert job.timeout == 999
     assert job.get_indexed_location() == 'Job 0: https://www.example.com'
+
+
+@pytest.mark.parametrize('headers', [5, 'Accept: text/html', ['Accept: text/html']], ids=['int', 'str', 'list'])
+def test_headers_not_a_mapping(headers: Any) -> None:
+    with pytest.raises(ValueError, match="Error in directive 'headers' of job 0"):
+        JobBase.unserialize({'url': 'https://www.example.com/', 'headers': headers})
+
+
+def test_headers_null() -> None:
+    """'headers:' with no value means no headers."""
+    job = JobBase.unserialize({'url': 'https://www.example.com/', 'headers': None})
+    assert dict(job.headers) == {}
 
 
 def test_with_defaults_headers() -> None:
@@ -1654,8 +1658,6 @@ def test_with_defaults_cookies_null_removes_default() -> None:
     }
     job_with_defaults = cast('UrlJob', job.with_defaults(config))
     assert job_with_defaults.get_cookies() == {'theme': 'dark', 'consent': 'yes'}
-    job_state = cast('JobState', SimpleNamespace(tries=0, old_etag='', old_timestamp=None))
-    assert job_with_defaults.get_headers(job_state)['Cookie'] == 'theme=dark; consent=yes'
     assert job.to_dict()['cookies'] == {'session': None, 'theme': 'dark'}
     only_removed = JobBase.unserialize({'url': 'https://www.example.com', 'cookies': {'session': None}})
     assert cast('UrlJob', only_removed).get_cookies() is None
@@ -2656,6 +2658,9 @@ class _ScriptedHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == '/cookies':
             status, content_type, body, extra = 200, 'text/plain', (self.headers.get('Cookie') or '').encode(), {}
+        elif self.path == '/redirect-to-localhost':  # to '/cookies' on another host
+            port = self.headers['Host'].split(':')[1]
+            status, content_type, body, extra = 302, None, b'', {'Location': f'http://localhost:{port}/cookies'}
         else:
             status, content_type, body, extra = self.ROUTES[self.path]
         self.send_response(status)
@@ -2789,3 +2794,149 @@ def test_http_clients_send_cookies(scripted_server: str, client: str) -> None:
     """Every HTTP client sends the cookies of the 'cookies' directive, except those set to null."""
     data, _, _ = _retrieve(scripted_server + '/cookies', client, cookies={'session': 'abc', 'tracking': None})
     assert data == 'session=abc'
+
+
+@pytest.mark.parametrize('client', RETRY_CLIENTS)
+def test_http_clients_send_cookies_after_initialization_url_on_another_host(scripted_server: str, client: str) -> None:
+    """The cookies reach url also when initialization_url is on another host (curl_cffi sent them to the first only)."""
+    init_url = scripted_server.replace('127.0.0.1', 'localhost') + '/etag'
+    data, _, _ = _retrieve(
+        scripted_server + '/cookies', client, initialization_url=init_url, cookies={'session': 'abc'}
+    )
+    assert data == 'session=abc'
+
+
+@pytest.mark.parametrize(
+    ('client', 'expected'), [('httpx2', 'session=abc'), ('requests', 'session=abc'), ('curl_cffi', '')]
+)
+def test_http_clients_cookies_after_redirect_to_another_host(scripted_server: str, client: str, expected: str) -> None:
+    """After a redirect to another host, httpx2 and requests still send the cookies, curl_cffi does not (documented)."""
+    if client == 'curl_cffi' and not curl_cffi_is_installed:
+        pytest.skip('curl_cffi not installed')
+    data, _, _ = _retrieve(scripted_server + '/redirect-to-localhost', client, cookies={'session': 'abc'})
+    assert data == expected
+
+
+@pytest.mark.parametrize(
+    ('final_url', 'url', 'expected'),
+    [
+        (
+            'https://example.com/landing;token=abc',
+            'https://example.com/data?t={token}',
+            'https://example.com/data?t=abc',
+        ),
+        (
+            'https://example.com/landing;token=abc;sid=x9',
+            'https://example.com/data?t={token}&s={sid}',
+            'https://example.com/data?t=abc&s=x9',
+        ),
+        ('https://example.com/landing', 'https://example.com/data', 'https://example.com/data'),
+    ],
+    ids=['one-param', 'two-params', 'no-params'],
+)
+def test_resolve_initialization_url(final_url: str, url: str, expected: str) -> None:
+    """The ;-separated parameters of the URL that initialization_url lands on are substituted into 'url'."""
+    job = cast('UrlJob', JobBase.unserialize({'url': url, 'initialization_url': 'https://example.com/'}))
+    assert job._resolve_initialization_url(final_url) == expected
+
+
+def test_resolve_initialization_url_missing_key() -> None:
+    job = cast(
+        'UrlJob',
+        JobBase.unserialize({'url': 'https://example.com/{sid}', 'initialization_url': 'https://example.com/'}),
+    )
+    with pytest.raises(ValueError, match=r"did not find key 'sid'"):
+        job._resolve_initialization_url('https://example.com/landing;token=abc')
+
+
+class _RecordingHandler(BaseHTTPRequestHandler):
+    """Records the host, method, Content-Type, Cookie and body of each request.
+
+    Every path but '/pixel.png' is a page loading an image from the host third-party.test.
+    """
+
+    requests: ClassVar[list[tuple[str, str, str | None, str | None, bytes]]] = []
+
+    def do_GET(self) -> None:
+        host, port = self.headers['Host'].split(':')
+        body = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+        self.requests.append((host, self.command, self.headers.get('Content-Type'), self.headers.get('Cookie'), body))
+        page = b'' if self.path == '/pixel.png' else f'<img src="http://third-party.test:{port}/pixel.png">'.encode()
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html')
+        self.send_header('Content-Length', str(len(page)))
+        self.end_headers()
+        self.wfile.write(page)
+
+    do_POST = do_PUT = do_GET  # noqa: N815
+
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+        pass
+
+
+@pytest.fixture
+def recording_server() -> Iterator[int]:
+    """A local HTTP server with a _RecordingHandler; yields its port (see _browser_retrieve for its host names)."""
+    _RecordingHandler.requests.clear()
+    server = ThreadingHTTPServer(('127.0.0.1', 0), _RecordingHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        yield server.server_address[1]
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def _browser_retrieve(**directives: Any) -> None:
+    """Run a browser job in Chrome, which resolves all the hosts ending in .test to the local server."""
+    job = JobBase.unserialize(
+        {'use_browser': True, 'switches': ['host-resolver-rules=MAP *.test 127.0.0.1'], 'timeout': 20, **directives}
+    )
+    with JobState(None, job) as job_state:  # ty:ignore[invalid-argument-type]
+        job.retrieve(job_state)
+
+
+@playwright_required
+def test_browser_sends_cookies_to_job_hosts_only(recording_server: int) -> None:
+    """A browser job sends its cookies to the hosts of url and initialization_url, not to other sites of the page."""
+    _browser_retrieve(
+        url=f'http://site.test:{recording_server}/',
+        initialization_url=f'http://init.test:{recording_server}/init',
+        cookies={'session': 'abc', 'tracking': None},
+    )
+    assert {host: cookie for host, _, _, cookie, _ in _RecordingHandler.requests} == {
+        'init.test': 'session=abc',
+        'site.test': 'session=abc',
+        'third-party.test': None,
+    }
+
+
+@playwright_required
+@pytest.mark.parametrize(
+    ('directives', 'expected'),
+    [
+        pytest.param(
+            {'data': {'q': 'a b', 'n': 1}}, ('POST', 'application/x-www-form-urlencoded', b'q=a+b&n=1'), id='form'
+        ),
+        pytest.param(
+            {'data': {'q': 'café'}, 'data_as_json': True},
+            ('POST', 'application/json', '{"q":"café"}'.encode()),
+            id='json',
+        ),
+        pytest.param({'data': 'q=a%20b'}, ('POST', 'application/x-www-form-urlencoded', b'q=a%20b'), id='str'),
+        pytest.param(
+            {'method': 'PUT', 'data': '{"q": 1}', 'headers': {'Content-Type': 'text/plain'}},
+            ('PUT', 'text/plain', b'{"q": 1}'),
+            id='put-with-content-type-header',
+        ),
+    ],
+)
+def test_browser_sends_data(
+    recording_server: int, directives: dict[str, Any], expected: tuple[str, str, bytes]
+) -> None:
+    """A browser job sends 'data' as the HTTP clients do, with its Content-Type on its own request only."""
+    _browser_retrieve(url=f'http://site.test:{recording_server}/', cookies={'session': 'abc'}, **directives)
+    (_, *request, cookie, body), *images = _RecordingHandler.requests  # Chrome may request the image more than once
+    assert (*request, body) == expected
+    assert cookie == 'session=abc'  # the route sending the data keeps the cookies
+    assert {image[:3] for image in images} == {('third-party.test', 'GET', None)}

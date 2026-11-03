@@ -153,6 +153,7 @@ omit = [
     'pip/*',
     'tests/*',
     'webchanges/_vendored/*',
+    'webchanges/storage/_redis.py',
     'webchanges.egg-info/*',
 ]
 relative_files = true

@@ -481,7 +481,7 @@
 
     <header>
       <div class="kicker">
-        Updated 26 Oct 2026 &middot; webchanges 3.39 vs urlwatch 2.29 &middot; ~4 min read &middot; built from each
+        Updated 3 Nov 2026 &middot; webchanges 3.40 vs urlwatch 2.29 &middot; ~4 min read &middot; built from each
         project's code and reference docs
       </div>
       <h1>webchanges vs urlwatch: a comparison</h1>
@@ -637,8 +637,9 @@ differ:
           <li>
             You need <strong>fine control of the browser</strong>: <code>block_elements</code>, <code>evaluate</code>,
             chained <code>wait_for_*</code>, a persistent <code>user_data_dir</code>, <code>switches</code>,
-            <code>http_credentials</code>, or attaching to a browser that is already running
-            (<code>connect_over_cdp</code>).
+            <code>http_credentials</code>, <code>headers</code> and <code>cookies</code>, a form sent with
+            <code>data</code> (<code>POST</code> or any <code>method</code>), or attaching to a browser that is already
+            running (<code>connect_over_cdp</code>).
           </li>
           <li>
             You want <strong>fewer false alarms</strong>: <code>empty_as_error</code> treats an empty response as a
@@ -747,7 +748,7 @@ differ:
 
       <section id="reference" aria-labelledby="reference-h">
         <h2 id="reference-h">Full reference comparison</h2>
-        <p class="ref-banner">Source: each project's code and reference docs (webchanges 3.39, urlwatch 2.29).</p>
+        <p class="ref-banner">Source: each project's code and reference docs (webchanges 3.40, urlwatch 2.29).</p>
 
         <h3 id="jobs">Jobs &amp; universal directives</h3>
         <table aria-label="Universal directives">
@@ -923,7 +924,14 @@ differ:
                 browser is launched)
               </li>
               <li><code>http_credentials</code>, <code>proxy</code> (log in, also to a proxy)</li>
-              <li><code>ignore_https_errors</code>, <code>referer</code>, <code>headers</code>, <code>cookies</code></li>
+              <li>
+                <code>cookies</code> (set for the job's own hosts only, never sent to the other sites the page loads),
+                <code>headers</code>, <code>referer</code>, <code>ignore_https_errors</code>
+              </li>
+              <li>
+                <code>data</code>, <code>data_as_json</code>, <code>method</code>, <code>params</code> (send a form or
+                JSON with <code>POST</code> or any method, with the right <code>Content-Type</code>)
+              </li>
               <li>
                 <code>wait_for_function</code>, <code>wait_for_selector</code> (state, strict, timeout; one or a list),
                 <code>wait_for_url</code>, <code>wait_for_timeout</code>, <code>wait_until</code>
@@ -939,7 +947,8 @@ differ:
               </li>
             </ul>
             <p class="meta">
-              Same engine, much smaller set of controls. webchanges runs these jobs as they are, translating
+              Same engine, much smaller set of controls: no cookies, headers or data, so the page is always loaded
+              with a plain <code>GET</code>. webchanges runs these jobs as they are, translating
               <code>useragent</code> into a <code>User-Agent</code> header, <code>browser</code> into
               <code>use_browser</code> and <code>wait_for</code> into <code>wait_for_selector</code>.
             </p>
@@ -1265,6 +1274,12 @@ differ:
             differ), <code>database</code> (engine and <code>max_snapshots</code>), <code>footnote</code>, and
             <code>jobs</code> / <code>hooks</code> (which files to load: files, globs or directories). Keys starting
             with <code>_</code> (e.g. <code>_note:</code>) are remarks.
+          </li>
+          <li>
+            Mistakes are caught when the files are loaded: webchanges checks the directives of
+            <code>job_defaults</code> as it does the jobs file's, so a misspelled one (e.g. <code>timout: 30</code>) or
+            a wrong value (e.g. <code>timeout: soon</code>) stops the run with an error naming it. urlwatch silently
+            ignores a misspelled <code>job_defaults</code> directive, and finds a wrong value only when a job runs.
           </li>
           <li>
             Database: both offer SQLite-based, Redis and text-file storage. webchanges' default SQLite database is

@@ -448,6 +448,63 @@ def test_html_markdown_to_html_tables() -> None:
     assert HtmlReporter.markdown_to_html(text, markdown_tables=False).count('<br>') == 4
 
 
+def _browser_reporter_report(old: str, new: str) -> tuple[Report, ReporterBase]:
+    """Return a report with one changed job, and a browser reporter for it."""
+    from webchanges.reporters import BrowserReporter
+
+    test_report = Report(UrlwatchTest())  # ty:ignore[invalid-argument-type]
+    test_report.job_states = []
+    job_state = JobState(None, JobBase.unserialize({'url': 'https://example.com/'}))  # ty:ignore[invalid-argument-type]
+    job_state.old_data = old
+    job_state.new_data = new
+    job_state.old_timestamp = job_state.new_timestamp = 1605147837.511478
+    test_report.changed(job_state)
+    reporter = BrowserReporter(
+        test_report,
+        test_report.config['report']['browser'],  # ty:ignore[invalid-argument-type]
+        test_report.job_states,
+        1.0,
+        [],
+        test_report.config['differ_defaults'],
+    )
+    return test_report, reporter
+
+
+def test_browser_reporter(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The HTML report is written in UTF-8 to a temporary file, opened in the browser, then deleted."""
+    import time
+    import webbrowser
+    from pathlib import Path
+    from urllib.parse import urlsplit
+    from urllib.request import url2pathname
+
+    opened: dict[str, Any] = {}
+
+    def fake_open(uri: str) -> bool:
+        opened['path'] = Path(url2pathname(urlsplit(uri).path))
+        opened['html'] = opened['path'].read_bytes().decode()  # strict UTF-8
+        return True
+
+    monkeypatch.setattr(webbrowser, 'open', fake_open)
+    monkeypatch.setattr(time, 'sleep', lambda _seconds: None)
+    _report, reporter = _browser_reporter_report('Price: 1 €\n', 'Price: 2 €\n')
+    reporter.submit()
+    assert opened['html'].startswith('<!DOCTYPE html>')
+    assert 'Price: 2 €' in opened['html']
+    assert not opened['path'].exists()
+
+
+def test_browser_reporter_nothing_to_report(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Nothing is opened when the only change turns out to have no reportable diff (e.g. whitespace only)."""
+    import webbrowser
+
+    monkeypatch.setattr(webbrowser, 'open', lambda _uri: pytest.fail('browser opened'))
+    _report, reporter = _browser_reporter_report('Price: 1\n', 'Price:   1\n')
+    reporter.job_states[0].job.differ = {'name': 'wdiff'}
+    reporter.submit()
+    assert reporter.job_states[0].verb == 'changed,no_report'
+
+
 def test_markdown_reporter_new_job_reports_content() -> None:
     """A new job is reported with its content, as by the text and HTML reporters, not as a diff against nothing."""
     from webchanges.reporters import MarkdownReporter

@@ -14,7 +14,6 @@ __lazy_modules__ = [
     'tempfile',
     'time',
     'urllib.parse',
-    'warnings',
 ]
 
 import html
@@ -26,7 +25,6 @@ import re
 import tempfile
 import threading
 import time
-import warnings
 from contextlib import ExitStack
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -204,12 +202,12 @@ class BrowserJob(UrlJobBase):
     )
 
     use_browser = True
-    # re-declared because retrieve() assigns it (to replace a deprecated value), from which ty would otherwise infer a
-    # BrowserJob attribute of type str
-    wait_until: Literal['commit', 'domcontentloaded', 'load', 'networkidle'] | None
 
     # See https://source.chromium.org/chromium/chromium/src/+/master:net/base/net_error_list.h
-    chromium_connection_errors = (  # range 100-199 Connection related errors
+    chromium_connection_errors = (
+        'net::ERR_TIMED_OUT',  # -7, for ignore_timeout_errors
+        'net::ERR_TOO_MANY_REDIRECTS',  # -310, for ignore_too_many_redirects
+        # range 100-199 Connection related errors
         'net::ERR_CONNECTION_CLOSED',  # 100
         'net::ERR_CONNECTION_RESET',  # 101
         'net::ERR_CONNECTION_REFUSED',  # 102
@@ -278,15 +276,11 @@ class BrowserJob(UrlJobBase):
         'net::ERR_TLS13_DOWNGRADE_DETECTED',  # 180
         'net::ERR_SSL_KEY_USAGE_INCOMPATIBLE',  # 181
         'net::ERR_INVALID_ECH_CONFIG_LIST',  # 182
-        (
-            'net::ERR_ECH_NOT_NEGOTIATED'  # 183
-            'net::ERR_ECH_FALLBACK_CERTIFICATE_INVALID'
-        ),  # 184
-        (
-            'net::ERR_PROXY_UNABLE_TO_CONNECT_TO_DESTINATION'  # 186
-            'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_REQUEST'  # 187
-            'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_RESPONSE'
-        ),  # 188
+        'net::ERR_ECH_NOT_NEGOTIATED',  # 183
+        'net::ERR_ECH_FALLBACK_CERTIFICATE_INVALID',  # 184
+        'net::ERR_PROXY_UNABLE_TO_CONNECT_TO_DESTINATION',  # 186
+        'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_REQUEST',  # 187
+        'net::ERR_PROXY_DELEGATE_CANCELED_CONNECT_RESPONSE',  # 188
     )
 
     def get_location(self) -> str:
@@ -300,6 +294,63 @@ class BrowserJob(UrlJobBase):
         """Sets the job's location (command or url) to location. Used for changing location (uuid)."""
         self.url = location
         self.guid = self.get_guid()
+
+    # https://playwright.dev/docs/api/class-request#request-resource-type
+    RESOURCE_TYPES = frozenset(
+        (
+            'document',
+            'stylesheet',
+            'image',
+            'media',
+            'font',
+            'script',
+            'texttrack',
+            'xhr',
+            'fetch',
+            'eventsource',
+            'websocket',
+            'manifest',
+            'other',
+        )
+    )
+
+    def validate(self, defaults_section: str | None = None) -> None:
+        """Checks the directives' types, then the values that their types do not constrain.
+
+        :param defaults_section: The job_defaults section of the configuration that the directives come from, if
+           validating those.
+        :raises ValueError: If a directive has a wrong type or value.
+        """
+        super().validate(defaults_section)
+
+        def error(name: str, message: str) -> ValueError:
+            return self.directive_error(name, message, defaults_section)
+
+        if self.wait_for is not None:
+            raise error('wait_for', "deprecated; replace it with 'wait_for_selector' or 'wait_for_timeout'")
+        if isinstance(self.use_browser, str) and not (
+            self.use_browser.startswith(('chrome', 'msedge')) or self.use_browser in {'firefox', 'webkit'}
+        ):
+            raise error('use_browser', f"{self.use_browser!r} is not 'firefox', 'webkit', 'chrome...' or 'msedge...'")
+        if (
+            self.http_credentials
+            and not urlsplit(self.http_credentials).netloc
+            and len(self.http_credentials.split(':')) != 2
+        ):
+            raise error('http_credentials', 'must be in the format username:password')
+        if unknown := [element for element in self.block_elements or [] if element not in self.RESOURCE_TYPES]:
+            raise error(
+                'block_elements',
+                f'unknown resource type {unknown[0]!r} (known: {", ".join(sorted(self.RESOURCE_TYPES))})',
+            )
+        if isinstance(self.wait_for_selector, list) and (
+            wrong := [item for item in self.wait_for_selector if not isinstance(item, (str, dict))]
+        ):
+            raise error(
+                'wait_for_selector', f'a list can only contain strings or dicts; found a {type(wrong[0]).__name__}'
+            )
+        if isinstance(self.wait_for_timeout, bool):
+            raise error('wait_for_timeout', f'must be a number of seconds; found {self.wait_for_timeout}')
 
     @staticmethod
     def get_user_agent_platform() -> str:
@@ -325,18 +376,12 @@ class BrowserJob(UrlJobBase):
 
         :param page: The Playwright page.
         :param timeout: The timeout in milliseconds when 'wait_for_url' is a string (None for Playwright's default).
-        :raises ValueError: If 'wait_for_url' is neither a string nor a dict.
         """
         logger.info('Job %s: Waiting for page to navigate to %s', self.index_number, self.wait_for_url)
         if isinstance(self.wait_for_url, str):
             page.wait_for_url(self.wait_for_url, wait_until=self.wait_until, timeout=timeout)
-        elif isinstance(self.wait_for_url, dict):
+        elif self.wait_for_url:
             page.wait_for_url(**self.wait_for_url)
-        else:
-            raise ValueError(
-                f"Job {self.index_number}: Directive 'wait_for_url' can only be a string or a dictionary; found a "
-                f'{type(self.wait_for_url).__name__} ( {self.get_indexed_location()} ).'
-            )
 
     def _save_error_files(
         self,
@@ -397,8 +442,7 @@ class BrowserJob(UrlJobBase):
            (navigation and content extraction). It receives ``(page, url, wait_until, referer)`` and returns the
            ``(data, ETag, media type)`` tuple directly.
 
-        :raises ValueError: If there is a problem with the value supplied in one of the keys in the configuration file.
-        :raises TypeError: If the value provided in one of the directives is not of the correct type.
+        :raises ValueError: If 'url' has a key to substitute that the page of 'initialization_url' does not provide.
         :raises ImportError: If the ``playwright`` or ``psutil`` package is not installed.
         :raises NotModifiedError: If the server returns an HTTP 304 (Not Modified) response.
         :raises TransientHTTPError: If an HTTP response code of 429, 500, 502, 503, or 504 is received, or (with the
@@ -435,69 +479,34 @@ class BrowserJob(UrlJobBase):
                 f'({job_state.job.get_indexed_location()})'
             ) from None
 
-        # deprecations
-        if self.navigate:
-            raise ValueError(f"Job {job_state.job.index_number}: Directive 'navigate' is deprecated with Playwright.")
-        if self.wait_for:
-            raise ValueError(
-                f"Job {job_state.job.index_number}: Directive 'wait_for' is deprecated with Playwright; replace with "
-                f"'wait_for_function', 'wait_for_selector' or 'wait_for_timeout'."
-            )
-        if self.wait_until in {'networkidle0', 'networkidle2'}:
-            warnings.warn(
-                f"Job {self.index_number}: Value '{self.wait_until}' of the 'wait_until' directive is deprecated "
-                f"with Playwright; for future compatibility replace it with 'networkidle'.",
-                DeprecationWarning,
-                stacklevel=1,
-            )
-            self.wait_until = 'networkidle'
-        if self.wait_for_navigation:
-            warnings.warn(
-                f"Job {self.index_number}: Directive 'wait_for_navigation' is deprecated with Playwright; "
-                "for future compatibility replace it with 'wait_for_url'.",
-                DeprecationWarning,
-                stacklevel=1,
-            )
-            if isinstance(self.wait_for_navigation, str):
-                self.wait_for_url = self.wait_for_navigation
-            else:
-                warnings.warn(
-                    f"Job {self.index_number}: Directive 'wait_for_navigation' is "
-                    f'of type {type(self.wait_for_navigation).__name__} and cannot be converted for use with '
-                    f"Playwright; please use 'wait_for_url' (see documentation)  ( {self.get_indexed_location()} ).",
-                    DeprecationWarning,
-                    stacklevel=1,
-                )
-
         headers = self.get_headers(job_state, user_agent=None)
 
-        if self.http_credentials:
-            if not isinstance(self.http_credentials, str):
-                raise ValueError(
-                    f"Job {job_state.job.index_number}: Directive 'http_credentials' needs to be a string in the "
-                    f'format username:password; found a {type(self.http_credentials).__name__}.'
-                )
-            creds_split: SplitResult = urlsplit(self.http_credentials)
+        # the data is sent with its Content-Type by the route set below (as a header, it would go to every request)
+        method = self.method or ('POST' if self.data else 'GET')
+        data = content_type = None
+        if self.data:
+            content_type = headers.pop(
+                'Content-Type', 'application/json' if self.data_as_json else 'application/x-www-form-urlencoded'
+            )
+            if isinstance(self.data, str):
+                data = self.data
+            elif self.data_as_json:
+                data = json.dumps(self.data, ensure_ascii=False, separators=(',', ':'))
+            else:
+                data = urlencode(self.data)
 
+        http_credentials: HttpCredentials | None = None
+        if self.http_credentials:
+            creds_split: SplitResult = urlsplit(self.http_credentials)
             if creds_split.netloc:
-                http_credentials: HttpCredentials = {
+                http_credentials = {
                     'username': creds_split.username or '',
                     'password': creds_split.password or '',
                     'origin': f'{creds_split.scheme}://{creds_split.netloc}',
                 }
             else:
-                if len(self.http_credentials.split(':')) != 2:
-                    raise ValueError(
-                        f'Job {job_state.job.index_number}: Directive http_credentials is malformed: '
-                        f'{self.http_credentials}'
-                    )
-                http_credentials: HttpCredentials = {
-                    'username': self.http_credentials.split(':')[0],
-                    'password': self.http_credentials.split(':')[1],
-                }
-
-        else:
-            http_credentials = None
+                username, password = self.http_credentials.split(':')
+                http_credentials = {'username': username, 'password': password}
 
         proxy_str = self.get_proxy()
         if proxy_str is not None:
@@ -510,13 +519,6 @@ class BrowserJob(UrlJobBase):
             proxy = None
 
         if self.switches:
-            if isinstance(self.switches, str):
-                self.switches = self.switches.split(',')
-            if not isinstance(self.switches, list):
-                raise TypeError(
-                    f"Job {job_state.job.index_number}: Directive 'switches' needs to be a string or list; found a "
-                    f'{type(self.switches).__name__} ( {self.get_indexed_location()} ).'
-                )
             args: list[str] | None = [f'--{switch.removeprefix("--")}' for switch in self.switches]
             if not headless and logger.getEffectiveLevel() <= 10:  # logging.INFO
                 args += ['--auto-open-devtools-for-tabs']
@@ -534,11 +536,6 @@ class BrowserJob(UrlJobBase):
             ignore_default_args = self.ignore_default_args
             if isinstance(ignore_default_args, list):
                 ignore_default_args = [f'--{a.removeprefix("--")}' for a in ignore_default_args]
-            elif not isinstance(self.ignore_default_args, bool):
-                raise TypeError(
-                    f"Job {job_state.job.index_number}: Directive 'ignore_default_args' needs to be a bool, string or "
-                    f'list; found a {type(self.ignore_default_args).__name__} ( {self.get_indexed_location()} ).'
-                )
         else:
             ignore_default_args = None
 
@@ -585,15 +582,9 @@ class BrowserJob(UrlJobBase):
                 elif value == 'firefox':
                     browser_type = p.firefox
                     channel = None
-                elif value == 'webkit':
+                else:  # 'webkit' (validate() rejects other values)
                     browser_type = p.webkit
                     channel = None
-                else:
-                    raise ValueError(
-                        f"Job {job_state.job.index_number}: Directive 'use_browser' value {value!r} must be "
-                        f"'firefox', 'webkit', or start with 'chrome' or 'msedge' "
-                        f'( {self.get_indexed_location()} ).'
-                    )
                 browser_name = executable_path or value
                 no_viewport = False if not self.switches else any('--window-size' in switch for switch in self.switches)
                 if not self.user_data_dir:
@@ -670,6 +661,22 @@ class BrowserJob(UrlJobBase):
                 )
                 context.add_init_script(init_script)
 
+            if cookies := self.get_cookies():
+                # set for the hosts of url and initialization_url only (a Cookie header would go to every host and be
+                # dropped once the site sets a cookie); they replace the cookies of the same name of a user_data_dir
+                # profile (which are then lost) or of the browser connected over CDP
+                origins = {
+                    f'{split.scheme}://{split.netloc}/'
+                    for split in map(urlsplit, filter(None, (self.url, self.initialization_url)))
+                }
+                context.add_cookies(
+                    [
+                        {'name': name, 'value': value, 'url': origin}
+                        for origin in origins
+                        for name, value in cookies.items()
+                    ]
+                )
+
             # set default timeout
             context.set_default_timeout(timeout)
 
@@ -704,7 +711,7 @@ class BrowserJob(UrlJobBase):
                     if self.wait_for_url:
                         self._wait_for_url(page)
                 updated_url = page.url
-                init_url_params = dict(parse_qsl(urlparse(updated_url).params))
+                init_url_params = dict(parse_qsl(urlparse(updated_url).params, separator=';'))
                 try:
                     new_url = url.format(**init_url_params)
                 except KeyError as e:
@@ -716,77 +723,27 @@ class BrowserJob(UrlJobBase):
                     url = new_url
                     logger.info('Job %s: URL updated to %s', self.index_number, url)
 
-            data = None
-            if self.data:
-                if not self.method:
-                    self.method = 'POST'
-                logger.info('Job %s: Sending POST request to %s', self.index_number, url)
-                if 'Content-Type' not in headers:
-                    headers['Content-Type'] = (
-                        'application/json' if self.data_as_json else 'application/x-www-form-urlencoded'
-                    )
-                if isinstance(self.data, (dict, list)):
-                    data = json.dumps(self.data, ensure_ascii=False) if self.data_as_json else urlencode(self.data)
-                elif isinstance(self.data, str):
-                    data = quote(self.data)
-                else:
-                    raise ValueError(
-                        f"Job {job_state.job.index_number}: Directive 'data' needs to be a string, dictionary or list; "
-                        f'found a {type(self.data).__name__} ( {self.get_indexed_location()} ).'
-                    )
-
             if self.params is not None:
-                if isinstance(self.params, (dict, list)):
-                    params = urlencode(self.params)
-                elif isinstance(self.params, str):
-                    params = quote(self.params)
-                else:
-                    raise ValueError(
-                        f"Job {job_state.job.index_number}: Directive 'params' needs to be a string, dictionary or "
-                        f'list; found a {type(self.params).__name__} ( {self.get_indexed_location()} ).'
-                    )
+                params = quote(self.params) if isinstance(self.params, str) else urlencode(self.params)
                 url += f'?{params}'
 
-            if self.method and self.method != 'GET':
+            if method != 'GET':
+                logger.info('Job %s: Sending %s request to %s', self.index_number, method, url)
 
                 def handle_route(route: Route) -> None:
                     """Handler function to change the route (a pyee.EventEmitter callback)."""
-                    logger.info(
-                        'Job %s: Intercepted route to change request method to %s', self.index_number, self.method
+                    logger.info('Job %s: Intercepted route to change request method to %s', self.index_number, method)
+                    route.continue_(
+                        method=method,
+                        post_data=data,
+                        headers=None
+                        if content_type is None
+                        else {**route.request.headers, 'content-type': content_type},
                     )
-                    route.continue_(method=str(self.method), post_data=data)
 
                 page.route(url, handler=handle_route)
 
             if self.block_elements:
-                if isinstance(self.block_elements, str):
-                    self.block_elements = self.block_elements.split(',')
-                if not isinstance(self.block_elements, list):
-                    raise TypeError(
-                        f"'block_elements' needs to be a string or list, not {type(self.block_elements)} "
-                        f'( {self.get_indexed_location()} )'
-                    )
-                playwright_request_resource_types = [
-                    # https://playwright.dev/docs/api/class-request#request-resource-type
-                    'document',
-                    'stylesheet',
-                    'image',
-                    'media',
-                    'font',
-                    'script',
-                    'texttrack',
-                    'xhr',
-                    'fetch',
-                    'eventsource',
-                    'websocket',
-                    'manifest',
-                    'other',
-                ]
-                for element in self.block_elements:
-                    if element not in playwright_request_resource_types:
-                        raise ValueError(
-                            f"Unknown '{element}' resource type in 'block_elements' ( {self.get_indexed_location()} )"
-                        )
                 logger.info(
                     "Job %s: Found 'block_elements' and adding a route to intercept elements", self.index_number
                 )
@@ -853,38 +810,17 @@ class BrowserJob(UrlJobBase):
                         for selector in self.wait_for_selector:
                             if isinstance(selector, str):
                                 page.wait_for_selector(selector)
-                            elif isinstance(selector, dict):
-                                page.wait_for_selector(**selector)
                             else:
-                                raise ValueError(
-                                    f"Job {job_state.job.index_number}: Directive 'wait_for_selector' can only be a "
-                                    f'string or a dictionary, or a list of these; found a '
-                                    f'{type(self.wait_for_selector).__name__} ( {self.get_indexed_location()} ).'
-                                )
+                                page.wait_for_selector(**selector)
                     if self.wait_for_function:
                         logger.info('Job %s: Waiting for function %s', self.index_number, self.wait_for_function)
                         if isinstance(self.wait_for_function, str):
                             page.wait_for_function(self.wait_for_function)
-                        elif isinstance(self.wait_for_function, dict):
-                            page.wait_for_function(**self.wait_for_function)
                         else:
-                            raise ValueError(
-                                f"Job {job_state.job.index_number}: Directive 'wait_for_function' can only be a string "
-                                f'or a dictionary; found a {type(self.wait_for_function).__name__}'
-                                f' ( {self.get_indexed_location()} ).'
-                            )
+                            page.wait_for_function(**self.wait_for_function)
                     if self.wait_for_timeout:
                         logger.info('Job %s: Waiting for timeout %s', self.index_number, self.wait_for_timeout)
-                        if isinstance(self.wait_for_timeout, (int, float)) and not isinstance(
-                            self.wait_for_timeout, bool
-                        ):
-                            page.wait_for_timeout(self.wait_for_timeout * 1000)
-                        else:
-                            raise ValueError(
-                                f"Job {job_state.job.index_number}: Directive 'wait_for_timeout' can only be a number; "
-                                f'found a {type(self.wait_for_timeout).__name__}'
-                                f' ( {self.get_indexed_location()} ).'
-                            )
+                        page.wait_for_timeout(self.wait_for_timeout * 1000)
 
                 else:
                     logger.info(
@@ -963,7 +899,9 @@ class BrowserJob(UrlJobBase):
                 if isinstance(e, PlaywrightTimeoutError):
                     logger.debug('Job %s: PlaywrightTimeoutError is transient', self.index_number)
                     raise TransientBrowserError('PlaywrightTimeoutError') from e
-                chromium_error = str(e.args[0]).split()[-1]  # error format is 'Page.goto: net:: ...'
+                # error format is 'Page.goto: net::ERR_... at <url>\nCall log:\n...'
+                chromium_error_match = re.search(r'net::ERR_\w+', str(e.args[0]))
+                chromium_error = chromium_error_match.group() if chromium_error_match else ''
                 if chromium_error in self.chromium_connection_errors:
                     logger.debug('Job %s: Browser error %s is transient', self.index_number, chromium_error)
                     raise TransientBrowserError(chromium_error) from e
@@ -1003,7 +941,7 @@ class BrowserJob(UrlJobBase):
         if (
             self.ignore_timeout_errors
             and isinstance(exception, TransientBrowserError)
-            and any(x in exception.args[0] for x in ('PlaywrightTimeoutError', 'net::ERR_TIMED_OUT'))
+            and exception.args[0] in ('PlaywrightTimeoutError', 'net::ERR_TIMED_OUT', 'net::ERR_CONNECTION_TIMED_OUT')
         ):
             return True
         if (

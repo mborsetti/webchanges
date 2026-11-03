@@ -41,7 +41,7 @@ class BrowserReporter(HtmlReporter):
         import webbrowser
 
         # Create a temporary file using a 'with' statement
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', suffix='.html', delete=False) as f:
             f.write(body_html)
             temp_path = Path(f.name)
 

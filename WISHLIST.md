@@ -16,5 +16,14 @@
   and say so in the docs; essentially a single maintainer; its ``abi3`` wheels don't load on free-threaded Python (needs
   a Rust build there, so leave it out of ``tests/requirements_pytest_free-threaded.txt``); and it keeps relative links,
   so make them absolute first (as the ``absolute_links`` filter does) to match ``html2text``'s output
+- [ ] Validate the jobs and configuration files against ``jobs.schema.json`` and ``config.schema.json`` at run time,
+  replacing the typeguard checks and most of ``BrowserJob.validate()`` (checked 03-Nov-26: the schema already rejects
+  what that code checks, except a malformed ``http_credentials`` (add a ``pattern``) and the obsolete ``wait_for``
+  (remove it from the schema), and also rejects ``headers: 5`` and misspelled ``job_defaults`` directives if their
+  sections reference the job directives). Use ``fastjsonschema`` (pure Python, no dependencies, compiles the schema to
+  code) with the schemas moved to draft-07 (rename ``$defs`` to ``definitions`` in ``config.schema.json``; check that
+  editors still flag ``deprecated`` directives), not ``jsonschema``, which needs ``rpds-py`` (Rust) for draft 2020-12.
+  Extend the loaded schema at start-up with the job kinds, directives and filters registered by ``hooks.py``, as
+  the bundled schema is closed. Then the vendored typeguard may go too, if ``config.yaml`` moves to its schema as well
 - [ ] Resolve TODOs
   - [ ] Can/should defusedxml be used?

@@ -297,6 +297,15 @@ cookies
 ^^^^^^^
 Cookies to send with the request (a dict).
 
+They are sent to the hosts of ``url`` and :ref:`initialization_url`. When ``url`` redirects to another host (e.g. from
+``example.com`` to ``www.example.com``), the ``httpx2`` and ``requests`` HTTP clients send them there too, but the
+``curl_cffi`` one (see :ref:`http_client`) and browser jobs do not.
+
+Browser jobs (``use_browser: true``) set them in the browser for the hosts of ``url`` and ``initialization_url`` only,
+so they are not sent to other sites the page loads resources from. With :ref:`user_data_dir`, they replace the
+profile's saved cookies of the same name, which are then lost. With :ref:`connect_over_cdp`, they are set in the running
+browser, replacing its cookies of the same name.
+
 The cookies found in a job are merged one cookie at a time with the default ones set in ``job_defaults`` in
 ``config.yaml``: a cookie in the job replaces only the default cookie of the same name, and all the other default
 cookies are still sent. To stop a default cookie from being sent, set it to null (no value) in the job:
@@ -315,6 +324,10 @@ See :ref:`here <job_defaults>` for how the defaults set for all jobs and for a j
 .. versionchanged:: 3.38
    A cookie set to null removes the default one; previously, it was sent with the value ``None``.
 
+.. versionchanged:: 3.40
+   Browser jobs no longer send the cookies to other sites the page loads resources from, and those with
+   ``connect_over_cdp`` no longer ignore them.
+
 
 .. _data:
 
@@ -330,7 +343,8 @@ directive ``data_as_json: true`` is also present, in which case it will be seria
 When this directive is specified:
 
 * If no ``method`` directive is specified, it is set to ``POST``.
-* If the ``method`` directive is set to ``GET`` or ``HEAD``, the data is interpreted to contain the query parameters.
+* The data is sent as the body of the request, never as query parameters (use :ref:`params` for these), even with
+  ``method: GET``: most servers ignore the body of a ``GET`` request, and browser jobs do not send it.
 * If no `Content-type
   <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type>`__ ``header`` is specified, such header is
   set to ``application/x-www-form-urlencoded`` unless the ``data_as_json: true`` directive is present, in which case
@@ -404,7 +418,7 @@ See more :ref:`here <overriding_content_encoding>`.
 
 headers
 ^^^^^^^
-Headers to send along with the request (a dict).
+Headers to send along with the request (a dict). Ignored by browser jobs with :ref:`connect_over_cdp`.
 
 The headers found in a job are merged one header at a time, case-insensitively, with the default ones (including those
 set in ``job_defaults`` in ``config.yaml``): a header in the job replaces only the default header of the same name, and
@@ -655,7 +669,8 @@ Use ``http_client: curl_cffi`` for sites guarded by Cloudflare, Akamai, or simil
 TLS handshake (JA3) or the HTTP/2 ``SETTINGS`` frame. ``curl_cffi`` wraps libcurl-impersonate, which replays real
 browser TLS fingerprints (Chrome, Firefox, Safari, Edge) at the wire level. The impersonated browser is controlled by
 the :ref:`impersonate <impersonate>` directive (default ``chrome``). This is much lighter than running a full
-headless browser job (``use_browser: true``).
+headless browser job (``use_browser: true``). As a browser does, ``curl_cffi`` sends the :ref:`cookies` only to the
+hosts of ``url`` and ``initialization_url``, not to another host that ``url`` redirects to.
 
 If none of ``httpx2`` (or ``httpx`` as temporary backup) and ``requests`` is installed, ``curl_cffi`` is used as a last-resort fallback when
 ``http_client`` is unset.
@@ -981,6 +996,17 @@ By default the connected browser is also cached for the lifetime of the process,
 process (e.g. ``--test`` cycles) reuse the connection. Set the environment variable
 ``WEBCHANGES_BROWSER_CDP_CACHE=0`` to disable caching (a new connection is opened and closed for every job).
 
+.. note::
+
+   As the browser is already running, the job's directives that set up a browser or its context are ignored and
+   never applied: :ref:`headers` (including ``User-Agent``, as well as those from ``job_defaults``),
+   :ref:`http_credentials`, :ref:`proxy`, :ref:`ignore_https_errors`, :ref:`switches`, :ref:`ignore_default_args`,
+   :ref:`user_data_dir` and :ref:`init_script`. The page is loaded with the browser's own headers and settings (e.g.
+   those of its logged-in profile); set them when launching it, e.g. with its ``--user-agent`` or ``--proxy-server``
+   command line switches. The directives acting on the page itself (e.g. :ref:`referer`, :ref:`wait_for_selector`,
+   :ref:`block_elements` or :ref:`evaluate`) work as usual. :ref:`cookies` are set in the running browser, replacing
+   its cookies of the same name.
+
 .. versionadded:: 3.37
 
 
@@ -1113,6 +1139,8 @@ Google Chrome, which is a derivative of Chromium (a list). These are called ``ar
 user_data_dir
 ^^^^^^^^^^^^^
 A path to a pre-existing user directory (containing, e.g., cookies etc.) that Chrome should be using (a string).
+
+A cookie of the :ref:`cookies` directive replaces the profile's saved cookie of the same name, which is then lost.
 
 .. versionadded:: 3.0
 
