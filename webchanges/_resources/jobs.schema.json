@@ -693,6 +693,11 @@
               "type": "boolean",
               "description": "Include range information (@@ lines).",
               "default": true
+            },
+            "ignore_whitespace": {
+              "type": "boolean",
+              "description": "Ignore changes of whitespace only (e.g. one space becoming two).",
+              "default": false
             }
           },
           "required": ["name"],

@@ -167,11 +167,50 @@ Output:
    </div>
    <embed>
 
+.. _ignore_whitespace:
+
+Ignoring whitespace
+:::::::::::::::::::
+
+The ``ignore_whitespace`` sub-directive (true/false) stops whitespace-only changes from being reported. Defaults to
+false.
+
+.. code-block:: yaml
+
+   url: https://example.net/unified_ignore_whitespace.html
+   differ:
+     name: unified
+     ignore_whitespace: true
+
+* Runs of whitespace, including tabs and non-breaking spaces, count as one space, and leading and trailing whitespace
+  is ignored.
+* If only whitespace changed, the job is not reported. Its snapshot is still saved.
+* If other lines also changed, only those are marked as changed. Context lines show the new data.
+* A line with both a whitespace and a text change is displayed in full, including its whitespace change.
+* A space removed altogether (``a b`` becoming ``ab``) and a blank line added or removed are reported. To also ignore
+  those, use the :ref:`wdiff <wdiff_diff>` differ.
+* With the :ref:`ai_google <ai_google_diff>` differ, this applies to the diff following the summary. The model still
+  receives the whitespace changes, and is still called when only whitespace changed.
+
+To apply it to all jobs using this differ, including those without a ``differ`` directive, add it to
+:ref:`differ_defaults <differ_defaults>` in the :ref:`configuration <configuration>` file. A job can opt out with
+``ignore_whitespace: false``.
+
+.. code-block:: yaml
+
+   differ_defaults:
+     unified:
+       ignore_whitespace: true
+
+.. versionadded:: 3.40
+
 Optional directives
 ```````````````````
 * ``context_lines`` (int): The number of lines on each side surrounding changes to include in the report (default: 3).
 * ``range_info`` (true/false): Whether to include line range information lines (those starting with ``@``) (default:
   true).
+* ``ignore_whitespace`` (true/false): Whether to ignore changes of whitespace only; see :ref:`ignore_whitespace`
+  (default: false).
 
 .. versionchanged:: 3.21
    Became a standalone differ. Added the ``range_info`` and ``context_line`` directives, the latter replacing the

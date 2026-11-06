@@ -56,6 +56,8 @@ Added
 * Sample Dockerfile (``docker/Dockerfile``, ``compose.yaml``), tested in CI. See :ref:`docker_sample`.
 * ``ai_google`` differ: ``diff`` sub-directive, choosing the differ of the diff shown after the summary (default
   ``unified``). See :ref:`ai_google_diff`.
+* ``unified`` differ: ``ignore_whitespace`` sub-directive, to not report changes of whitespace only, such as one space
+  becoming two. See :ref:`ignore_whitespace`.
 
 Changed
 ```````

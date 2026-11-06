@@ -604,7 +604,32 @@ class UnifiedDiffer(DifferBase):
         'range_info': 'include range information lines (default: true)',
         'additions_only': 'keep only addition lines (default: false)',
         'deletions_only': 'keep only deletion lines (default: false)',
+        'ignore_whitespace': 'ignore changes of whitespace only (default: false)',
     }
+
+    @staticmethod
+    def align_whitespace(old_lines: list[str], new_lines: list[str]) -> list[str]:
+        """Replaces each old line that differs from its matching new line by whitespace only with that new line.
+
+        Lines match if they are equal once runs of whitespace count as one space and leading and trailing whitespace is
+        dropped. Diffing the result against the new lines reports real changes only, with context lines as in the new
+        data, and without having to reimplement the formatting of ``difflib.unified_diff``.
+
+        :param old_lines: The lines of the old data.
+        :param new_lines: The lines of the new data.
+        :returns: The aligned old lines.
+        """
+
+        def normalize(lines: list[str]) -> list[str]:
+            return [' '.join(line.split()) for line in lines]
+
+        old_normalized, new_normalized = normalize(old_lines), normalize(new_lines)
+        if old_normalized == new_normalized:  # whitespace-only change: no need to run the matcher
+            return new_lines
+        aligned = old_lines.copy()
+        for i, j, n in difflib.SequenceMatcher(None, old_normalized, new_normalized).get_matching_blocks():
+            aligned[i : i + n] = new_lines[j : j + n]
+        return aligned
 
     def unified_diff_to_html(self, diff: str) -> Iterator[str]:
         """Generates a colorized HTML table from unified diff, applying styles and processing based on job values.
@@ -710,17 +735,25 @@ class UnifiedDiffer(DifferBase):
             contextlines = directives.get('context_lines', self.job.contextlines)
             if contextlines is None:
                 contextlines = 0 if additions_only or deletions_only else 3
-            diff = list(
-                difflib.unified_diff(
-                    str(self.state.old_data).splitlines(),
-                    str(self.state.new_data).splitlines(),
-                    '@',
-                    '@',
-                    self.make_timestamp(self.state.old_timestamp, tz),
-                    self.make_timestamp(self.state.new_timestamp, tz),
-                    contextlines,
-                    lineterm='',
+            old_lines = str(self.state.old_data).splitlines()
+            new_lines = str(self.state.new_data).splitlines()
+            if directives.get('ignore_whitespace'):
+                old_lines = self.align_whitespace(old_lines, new_lines)
+            diff = (
+                list(
+                    difflib.unified_diff(
+                        old_lines,
+                        new_lines,
+                        '@',
+                        '@',
+                        self.make_timestamp(self.state.old_timestamp, tz),
+                        self.make_timestamp(self.state.new_timestamp, tz),
+                        contextlines,
+                        lineterm='',
+                    )
                 )
+                if old_lines != new_lines
+                else []
             )
             if not diff:
                 self.state.verb = 'changed,no_report'

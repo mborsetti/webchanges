@@ -45,6 +45,8 @@ from webchanges.util import SettingError
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
+    from webchanges.differs import ReportKind
+
 py_latest_only = cast(
     'Callable[[Callable], Callable]',
     pytest.mark.skipif(
@@ -274,6 +276,129 @@ def test_unified_no_changes(job_state: JobState) -> None:
     job_state.new_data = job_state.old_data
     diff = job_state.get_diff()
     assert diff == ''
+
+
+@pytest.mark.parametrize(
+    ('old', 'new'),
+    [
+        ('a b\nc\n', 'a  b\nc\n'),
+        ('a  b\nc\n', 'a b\nc\n'),
+        ('a b\n', 'a\tb\n'),
+        ('a b\n', 'a\xa0b\n'),
+        ('a\nb\n', '  a\nb   \n'),
+        ('| a | b |\n|---|---|\n| 1 | 2 |\n', '| a   | b |\n|---|---|\n| 1   | 2 |\n'),
+    ],
+    ids=['one_to_two', 'two_to_one', 'tab', 'nbsp', 'leading_and_trailing', 'padded_markdown_table'],
+)
+@pytest.mark.parametrize('report_kind', ['plain', 'markdown', 'html'])
+def test_unified_ignore_whitespace_only(old: str, new: str, report_kind: ReportKind, job_state: JobState) -> None:
+    """Test that a whitespace-only change yields no report, for all report kinds."""
+    job_state.old_data = old
+    job_state.new_data = new
+    job_state.job.differ = {'name': 'unified', 'ignore_whitespace': True}
+    assert job_state.get_diff(report_kind, tz=test_tz) == ''
+    assert job_state.verb == 'changed,no_report'
+
+
+def test_unified_ignore_whitespace_with_real_change(job_state: JobState) -> None:
+    """Test that only the real change is marked, with context lines as in the new data."""
+    job_state.old_data = 'a  b\nkeep\nold\n'
+    job_state.new_data = 'a b\nkeep\nnew\n'
+    job_state.verb = 'changed'
+    job_state.job.differ = {'name': 'unified', 'ignore_whitespace': True}
+    assert job_state.get_diff(tz=test_tz).splitlines()[2:] == ['@@ -1,3 +1,3 @@', ' a b', ' keep', '-old', '+new']
+    assert job_state.verb == 'changed'
+    html = job_state.get_diff('html', tz=test_tz)
+    assert '<tr><td style="background-color:#d1ffd1;color:#082b08;">new</td></tr>' in html
+    assert '<tr><td>a b</td></tr>' in html
+    assert 'a  b' not in html
+
+
+def test_unified_ignore_whitespace_line_with_both_changes(job_state: JobState) -> None:
+    """Test that a line with both a whitespace and a text change is shown as a normal change."""
+    job_state.old_data = 'price  10\n'
+    job_state.new_data = 'price 11\n'
+    job_state.job.differ = {'name': 'unified', 'ignore_whitespace': True}
+    assert job_state.get_diff(tz=test_tz).splitlines()[2:] == ['@@ -1 +1 @@', '-price  10', '+price 11']
+
+
+@pytest.mark.parametrize(
+    ('old', 'new', 'expected'),
+    [
+        ('a b\n', 'ab\n', ['@@ -1 +1 @@', '-a b', '+ab']),
+        ('a\nb\n', 'a\n\nb\n', ['@@ -1,2 +1,3 @@', ' a', '+', ' b']),
+    ],
+    ids=['space_removed', 'blank_line_added'],
+)
+def test_unified_ignore_whitespace_still_reported(old: str, new: str, expected: list[str], job_state: JobState) -> None:
+    """Test the changes that are not considered as whitespace-only."""
+    job_state.old_data = old
+    job_state.new_data = new
+    job_state.job.differ = {'name': 'unified', 'ignore_whitespace': True}
+    assert job_state.get_diff(tz=test_tz).splitlines()[2:] == expected
+
+
+@pytest.mark.parametrize('differ', [None, {'name': 'unified'}, {'name': 'unified', 'ignore_whitespace': False}])
+def test_unified_ignore_whitespace_off(differ: dict[str, Any] | None, job_state: JobState) -> None:
+    """Test that whitespace changes are reported by default or if turned off."""
+    job_state.old_data = 'a b\n'
+    job_state.new_data = 'a  b\n'
+    job_state.job.differ = differ
+    assert job_state.get_diff(tz=test_tz).splitlines()[2:] == ['@@ -1 +1 @@', '-a b', '+a  b']
+
+
+def test_unified_ignore_whitespace_differ_defaults(job_state: JobState) -> None:
+    """Test that differ_defaults apply to a job without a differ directive."""
+    job_state.old_data = 'a b\n'
+    job_state.new_data = 'a  b\n'
+    assert job_state.get_diff(tz=test_tz, differ_defaults={'unified': {'ignore_whitespace': True}}) == ''
+    assert job_state.verb == 'changed,no_report'
+
+
+def test_unified_ignore_whitespace_differ_defaults_job_wins(job_state: JobState) -> None:
+    """Test that a job's directive takes precedence over differ_defaults."""
+    job_state.old_data = 'a b\n'
+    job_state.new_data = 'a  b\n'
+    job_state.job.differ = {'name': 'unified', 'ignore_whitespace': False}
+    diff = job_state.get_diff(tz=test_tz, differ_defaults={'unified': {'ignore_whitespace': True}})
+    assert diff.splitlines()[2:] == ['@@ -1 +1 @@', '-a b', '+a  b']
+
+
+@pytest.mark.parametrize(
+    ('directive', 'expected'),
+    [('additions_only', ['+new']), ('deletions_only', ['-old'])],
+)
+def test_unified_ignore_whitespace_additions_deletions_only(
+    directive: str, expected: list[str], job_state: JobState
+) -> None:
+    """Test that additions_only and deletions_only don't show whitespace-only changes."""
+    job_state.old_data = 'a  b\nkeep\nold\n'
+    job_state.new_data = 'a b\nkeep\nnew\n'
+    job_state.job.differ = {'name': 'unified', 'ignore_whitespace': True, directive: True, 'range_info': False}
+    diff = job_state.get_diff(tz=test_tz).splitlines()
+    assert diff[3:] == expected
+
+
+@pytest.mark.parametrize(
+    'directive',
+    ['additions_only', 'deletions_only'],
+)
+def test_unified_ignore_whitespace_only_additions_deletions_only(directive: str, job_state: JobState) -> None:
+    """Test that a whitespace-only change yields no report also with additions_only and deletions_only."""
+    job_state.old_data = 'a  b\n'
+    job_state.new_data = 'a b\n'
+    job_state.job.differ = {'name': 'unified', 'ignore_whitespace': True, directive: True}
+    assert job_state.get_diff(tz=test_tz) == ''
+    assert job_state.verb == 'changed,no_report'
+
+
+def test_unified_ignore_whitespace_long_repeated_lines(job_state: JobState) -> None:
+    """Test long data made of repeated lines, which difflib's autojunk heuristic treats as junk."""
+    job_state.old_data = 'a  b\nc\nd\n' * 150
+    job_state.new_data = 'a b\nc\nd\n' * 150
+    job_state.job.differ = {'name': 'unified', 'ignore_whitespace': True}
+    assert job_state.get_diff(tz=test_tz) == ''
+    assert job_state.verb == 'changed,no_report'
 
 
 def test_unified_additions_only(job_state: JobState) -> None:
@@ -1338,6 +1463,16 @@ def test_ai_google_diff_differ_defaults_default_unified(ai_google_no_key_state: 
     diff = job_state.get_diff(tz=test_tz, differ_defaults={'unified': {'range_info': False}})
     assert '\n-a\n+b\n------------\n' in diff
     assert '@@' not in diff
+
+
+def test_ai_google_diff_ignore_whitespace_only(ai_google_no_key_state: JobState) -> None:
+    """Test that a whitespace-only change is not reported if the diff following the summary ignores whitespace."""
+    job_state = ai_google_no_key_state
+    job_state.old_data = 'a b\n'
+    job_state.new_data = 'a  b\n'
+    job_state.job.differ = {'name': 'ai_google'}
+    job_state.get_diff(tz=test_tz, differ_defaults={'unified': {'ignore_whitespace': True}})
+    assert job_state.verb == 'changed,no_report'
 
 
 def test_ai_google_no_diff_not_in_footer(ai_google_no_key_state: JobState) -> None:
