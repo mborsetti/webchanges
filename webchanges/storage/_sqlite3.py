@@ -408,7 +408,7 @@ class SsdbSQLite3Storage(SsdbStorage):
 
         return total_searched
 
-    def clean_all(self, keep_entries: int = 1) -> int:  # ty:ignore[invalid-mutable-override]
+    def clean_all(self, keep_entries: int = 1) -> int:
         """Delete all older entries for each 'guid' (keep only keep_entries).
 
         :returns: Number of records deleted.

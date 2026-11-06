@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 try:
-    from typeguard import check_type  # ty:ignore[unresolved-import]
+    from typeguard import check_type  # ty:ignore[import-not-found]
 except ImportError:
     from webchanges._vendored.typeguard import check_type
 

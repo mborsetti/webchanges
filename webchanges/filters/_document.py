@@ -161,7 +161,7 @@ class Pdf2TextFilter(FilterBase):  # pragma: has-pdftotext
             )
 
         try:
-            import pdftotext  # ty:ignore[unresolved-import]
+            import pdftotext  # ty:ignore[import-not-found]
         except ImportError as e:  # pragma: has-pdftotext
             self.raise_import_error('pdftotext', self.__kind__, e, extra='pdf2text')
 
@@ -243,7 +243,7 @@ class OCRFilter(FilterBase):  # pragma: has-pytesseract
             self.raise_import_error('pillow', self.__kind__, e, extra='ocr')
 
         try:
-            import pytesseract  # ty:ignore[unresolved-import]
+            import pytesseract  # ty:ignore[import-not-found]
         except ImportError as e:  # pragma: has-pytesseract
             self.raise_import_error('pytesseract', self.__kind__, e, extra='ocr')
 
@@ -275,7 +275,7 @@ class JQFilter(FilterBase):  # pragma: has-jq
             raise ValueError(f"The 'jq' filter needs valid JSON. ({self.job.get_indexed_location()})")  # noqa: B904
 
         try:
-            import jq  # ty:ignore[unresolved-import]
+            import jq  # ty:ignore[import-not-found]
         except ImportError as e:  # pragma: has-jq
             self.raise_import_error('jq', self.__kind__, e, extra='jq')
 

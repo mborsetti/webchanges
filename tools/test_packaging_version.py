@@ -24,7 +24,7 @@ import operator
 import pickle
 import sys
 import typing
-from copy import replace  # ty:ignore[unresolved-import]
+from copy import replace  # ty:ignore[import-not-found]
 from pathlib import Path
 
 import pytest
@@ -46,7 +46,7 @@ from webchanges._vendored.packaging_version import (  # noqa: E402
 )
 
 try:
-    import pretend  # ty:ignore[unresolved-import]
+    import pretend  # ty:ignore[import-not-found]
 except ImportError:
     pretend = None
 

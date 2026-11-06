@@ -29,7 +29,7 @@ if httpx2 is None:  # pragma: no cover
     print("Required package 'httpx2' (or 'httpx') not found; will attempt to run using 'requests'")
 
 try:
-    from typeguard import TypeCheckError, check_type  # ty:ignore[unresolved-import]
+    from typeguard import TypeCheckError, check_type  # ty:ignore[import-not-found]
 except ImportError:
     from webchanges._vendored.typeguard import TypeCheckError, check_type
 

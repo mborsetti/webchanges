@@ -41,7 +41,7 @@ from webchanges.storage._base import BaseYamlFileStorage, JobsBaseFileStorage
 from webchanges.storage._config import DEFAULT_CONFIG, _Config, validate_config
 
 try:
-    from typeguard import TypeCheckError  # ty:ignore[unresolved-import]
+    from typeguard import TypeCheckError  # ty:ignore[import-not-found]
 except ImportError:
     from webchanges._vendored.typeguard import TypeCheckError
 
