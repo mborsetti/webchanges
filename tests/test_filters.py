@@ -155,7 +155,7 @@ def test_execute_inherits_environment_but_does_not_modify_it() -> None:
         command = 'cmd /c echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('execute')
     # noinspection PyTypeChecker
-    data, _ = filtercls(local_job_state).filter(  # ty:ignore[call-non-callable]
+    data, _ = filtercls(local_job_state).filter(  # ty:ignore[not-callable]
         'input-string',
         'text/plain',
         {'command': command},
@@ -190,7 +190,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
         command = 'echo %INHERITED_FROM%/%URLWATCH_JOB_NAME%'
     filtercls = FilterBase.__subclasses__.get('shellpipe')
     # noinspection PyTypeChecker
-    data, _ = filtercls(local_job_state).filter(  # ty:ignore[call-non-callable]
+    data, _ = filtercls(local_job_state).filter(  # ty:ignore[not-callable]
         'input-string',
         'text/plain',
         {'command': command},
@@ -209,7 +209,7 @@ def test_shellpipe_inherits_environment_but_does_not_modify_it() -> None:
 def test_filter_requires_bytes() -> None:
     filtercls = FilterBase.__subclasses__.get('pdf2text')
     # noinspection PyTypeChecker
-    assert filtercls(job_state).is_bytes_filter_kind('pdf2text') is True  # ty:ignore[call-non-callable]
+    assert filtercls(job_state).is_bytes_filter_kind('pdf2text') is True  # ty:ignore[not-callable]
 
 
 def test_deprecated_filters() -> None:
@@ -220,7 +220,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter(  # ty:ignore[call-non-callable]
+        data, _ = filtercls(job_state).filter(  # ty:ignore[not-callable]
             '<div>a</div>',
             'text/plain',
             {'method': 'pyhtml2text'},
@@ -234,7 +234,7 @@ def test_deprecated_filters() -> None:
 
     # urlwatch's lynx method runs the default method instead, ignoring lynx's options
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter(  # ty:ignore[call-non-callable]
+        data, _ = filtercls(job_state).filter(  # ty:ignore[not-callable]
             '<div>a</div>',
             'text/plain',
             {'method': 'lynx', 'width': 200},
@@ -249,7 +249,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('html2text')
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 're'})  # ty:ignore[call-non-callable]
+        data, _ = filtercls(job_state).filter('<div>a</div>', 'text/plain', {'method': 're'})  # ty:ignore[not-callable]
     assert data == 'a'
     assert len(w) == 1
     expected = "Filter html2text's method 're' is deprecated: replace with 'strip_tags' (Job 0: "
@@ -257,7 +257,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('grep')
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # ty:ignore[call-non-callable]
+        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # ty:ignore[not-callable]
     assert data == 'b'
     assert len(w) == 1
     expected = "The 'grep' filter is deprecated; replace with 'keep_lines_containing' + 're' subfilter (Job 0: "
@@ -266,7 +266,7 @@ def test_deprecated_filters() -> None:
     filtercls = FilterBase.__subclasses__.get('grepi')
     with pytest.warns(DeprecationWarning) as w:
         # noinspection PyTypeChecker
-        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # ty:ignore[call-non-callable]
+        data, _ = filtercls(job_state).filter('a\nb', 'text/plain', {'text': 'b'})  # ty:ignore[not-callable]
     assert data == 'a'
     assert len(w) == 1
     expected = "The 'grepi' filter is deprecated; replace with 'delete_lines_containing' + 're' subfilter (Job 0: "
@@ -274,7 +274,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('striplines')
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter('a  \nb', 'text/plain', {})  # ty:ignore[call-non-callable]
+        data, _ = filtercls(job_state).filter('a  \nb', 'text/plain', {})  # ty:ignore[not-callable]
     assert data == 'a\nb'
     assert len(w) == 1
     expected = "The 'striplines' filter is deprecated; replace with 'strip' and sub-directive 'splitlines: true' (Job "
@@ -282,7 +282,7 @@ def test_deprecated_filters() -> None:
 
     filtercls = FilterBase.__subclasses__.get('remove-duplicate-lines')
     with pytest.warns(DeprecationWarning) as w:
-        data, _ = filtercls(job_state).filter('a\nb\na', 'text/plain', {})  # ty:ignore[call-non-callable]
+        data, _ = filtercls(job_state).filter('a\nb\na', 'text/plain', {})  # ty:ignore[not-callable]
     assert data == 'a\nb'
     assert len(w) == 1
     expected = (
@@ -441,7 +441,7 @@ def test_filter_exceptions(
     filtercls = FilterBase.__subclasses__.get(filter_kind)
     with pytest.raises(exc_type) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter(data, mime_type, subfilter)  # ty:ignore[call-non-callable]
+        filtercls(job_state).filter(data, mime_type, subfilter)  # ty:ignore[not-callable]
     assert e.value.args[0][: len(expected)] == expected
 
 
@@ -458,7 +458,7 @@ def test_filter_exceptions_jq(data: str, subfilter: dict[str, Any], expected: st
     filtercls = FilterBase.__subclasses__.get('jq')
     with pytest.raises(ValueError) as e:
         # noinspection PyTypeChecker
-        filtercls(job_state).filter(data, 'text/json', subfilter)  # ty:ignore[call-non-callable]
+        filtercls(job_state).filter(data, 'text/json', subfilter)  # ty:ignore[not-callable]
     assert e.value.args[0][: len(expected)] == expected
 
 

@@ -87,8 +87,8 @@ class CustomTextFileReporter(TextReporter):
 
     __kind__ = 'custom_file'
 
-    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
-        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # ty: ignore[invalid-key]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[incompatible-method-override]
+        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # ty: ignore[invalid-typed-dict-key]
 
 
 class CustomHtmlFileReporter(HtmlReporter):
@@ -96,5 +96,5 @@ class CustomHtmlFileReporter(HtmlReporter):
 
     __kind__ = 'custom_html'
 
-    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
-        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # ty:ignore[invalid-key]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[incompatible-method-override]
+        Path(self.config['filename']).write_text('\n'.join(super().submit()))  # ty:ignore[invalid-typed-dict-key]

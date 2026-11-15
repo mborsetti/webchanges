@@ -882,7 +882,7 @@ class TestVersion:
     @pytest.mark.skipif(pretend is None, reason='requires the optional "pretend" package')
     @pytest.mark.parametrize(('op', 'expected'), [('eq', False), ('ne', True)])
     def test_compare_other(self, op: str, expected: bool) -> None:
-        other = pretend.stub(**{f'__{op}__': lambda _: NotImplemented})  # ty:ignore[unresolved-attribute]
+        other = pretend.stub(**{f'__{op}__': lambda _: NotImplemented})  # ty:ignore[missing-union-attribute]
 
         assert getattr(operator, op)(Version('1'), other) is expected
 

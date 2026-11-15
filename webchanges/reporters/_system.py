@@ -33,7 +33,7 @@ class RunCommandReporter(TextReporter):
 
     config: _ConfigReportRunCommand
 
-    def submit(self) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self) -> None:  # ty:ignore[incompatible-method-override]
         if not self.config['command']:
             raise SettingError('Reporter "run_command" needs a command')
 
@@ -92,7 +92,7 @@ class ShellReporter(RunCommandReporter):
 
     __kind__ = 'shell'
 
-    config: _ConfigReportShell  # ty:ignore[invalid-attribute-override]
+    config: _ConfigReportShell  # ty:ignore[incompatible-attribute-override]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         warnings.warn("'shell' reporter is deprecated; use 'run_command' instead", DeprecationWarning, stacklevel=1)

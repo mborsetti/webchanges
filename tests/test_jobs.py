@@ -2338,7 +2338,7 @@ def test_job_states_verb(time_jobs_urlwatcher: Urlwatch) -> None:
     """First run produces ``new``; second run with no change produces ``unchanged``."""
     urlwatcher = time_jobs_urlwatcher
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     assert urlwatcher.report.job_states[-1].verb == 'new'
 
     urlwatcher.run_jobs()
@@ -2349,7 +2349,7 @@ def test_job_states_verb_notimestamp_unchanged(time_jobs_urlwatcher: Urlwatch) -
     """A snapshot with ``timestamp=0`` and a re-run still classifies as ``unchanged``."""
     urlwatcher = time_jobs_urlwatcher
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     assert urlwatcher.report.job_states[-1].verb == 'new'
 
     guid = urlwatcher.ssdb_storage.get_guids()[0]
@@ -2366,7 +2366,7 @@ def test_job_states_verb_notimestamp_unchanged(time_jobs_urlwatcher: Urlwatch) -
             error_data=snapshot.error_data,
         ),
     )
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
 
     urlwatcher.run_jobs()
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
@@ -2376,17 +2376,17 @@ def test_job_states_verb_notimestamp_changed(time_jobs_urlwatcher: Urlwatch) -> 
     """Multiple snapshot rewrites (no timestamp / 1 try / both) all stay ``unchanged`` for the same data."""
     urlwatcher = time_jobs_urlwatcher
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     assert urlwatcher.report.job_states[-1].verb == 'new'
 
     guid = urlwatcher.jobs[0].guid
     snapshot = urlwatcher.ssdb_storage.load(guid)
     urlwatcher.ssdb_storage.delete(guid)
     urlwatcher.ssdb_storage.save(guid=guid, snapshot=snapshot)
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
 
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     assert urlwatcher.report.job_states[-1].verb == 'unchanged'
 
     snapshot = urlwatcher.ssdb_storage.load(guid)
@@ -2779,7 +2779,7 @@ def test_http_clients_error_response(
     assert str(exc_info.value) == message.format(url=url)
     assert isinstance(exc_info.value, TransientHTTPError) is transient
     if transient:
-        assert exc_info.value.retry_after == retry_after  # ty:ignore[unresolved-attribute]
+        assert exc_info.value.retry_after == retry_after  # ty:ignore[missing-attribute]
 
 
 @pytest.mark.parametrize('client', RETRY_CLIENTS)

@@ -52,7 +52,7 @@ def to_str(value: str | bytes, encoding: str = "utf-8") -> str:
 
 
 def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:
-    return value if isinstance(match_type_of, str) else value.encode()  # ty:ignore[invalid-return-type]
+    return value if isinstance(match_type_of, str) else value.encode()  # ty:ignore[invalid-explicit-return]
 
 
 # from https://github.com/pydantic/httpx2/blob/6bfbf296bd87891287b3b0335493c7317be4ef18/src/httpx2/httpx2/_models.py
@@ -194,7 +194,7 @@ class Headers(typing.MutableMapping[str, str]):
     @typing.overload
     def get(self, key: str, default: _T) -> str | _T: ...
 
-    def get(self, key: str, default: _T | None = None) -> str | _T | None:  # ty:ignore[invalid-method-override]
+    def get(self, key: str, default: _T | None = None) -> str | _T | None:  # ty:ignore[incompatible-method-override]
         """
         Return a header value. If multiple occurrences of the header occur
         then concatenate them together with commas.
@@ -226,7 +226,7 @@ class Headers(typing.MutableMapping[str, str]):
             split_values.extend([item.strip() for item in value.split(",")])
         return split_values
 
-    def update(self, headers: HeaderTypes | None = None) -> None:  # ty: ignore[invalid-method-override]
+    def update(self, headers: HeaderTypes | None = None) -> None:  # ty: ignore[incompatible-method-override]
         headers = Headers(headers)
         for key in headers.keys():
             if key in self:

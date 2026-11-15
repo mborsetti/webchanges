@@ -27,7 +27,7 @@ def build_tree(klass: type, level: int) -> Iterator[str]:
     for i, kls in enumerate(klass.__subclasses__()):
         branch = '└───' if i + 1 == len(klass.__subclasses__()) else '├───'
         indent = '│   ' * (level - 1)
-        yield ('' if level == 0 else indent + branch) + kls.__kind__  # ty:ignore[unresolved-attribute]
+        yield ('' if level == 0 else indent + branch) + kls.__kind__  # ty:ignore[missing-attribute]
 
         yield from build_tree(kls, level + 1)
 

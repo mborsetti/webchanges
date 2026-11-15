@@ -812,7 +812,7 @@ def test_main_reraises_broken_pipe_not_from_stdout(monkeypatch: pytest.MonkeyPat
 @pytest.mark.skipif(sys.platform == 'win32', reason='SIGPIPE does not exist on Windows')
 def test_importing_cli_leaves_sigpipe_ignored() -> None:
     """Importing cli must not restore SIGPIPE's default action, which would kill the process on a closed socket."""
-    assert signal.getsignal(signal.SIGPIPE) == signal.SIG_IGN  # ty:ignore[unresolved-attribute]
+    assert signal.getsignal(signal.SIGPIPE) == signal.SIG_IGN  # ty:ignore[missing-attribute]
 
 
 def test_first_run_creates_default_config_and_jobs_files(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -842,7 +842,7 @@ def test_load_hooks_missing_file_warns_when_inputted(tmp_path: Path, recwarn: py
     missing = tmp_path / 'hooks_does_not_exist.py'
     load_hooks(missing, is_default=False)
     assert len(recwarn) == 1
-    message = recwarn.pop(RuntimeWarning).message.args[0]  # ty:ignore[unresolved-attribute]
+    message = recwarn.pop(RuntimeWarning).message.args[0]  # ty:ignore[missing-union-attribute]
     assert message == f'Hooks file {missing} not imported because it does not exist or is not a file'
 
 

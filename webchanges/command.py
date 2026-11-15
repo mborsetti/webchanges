@@ -1054,7 +1054,7 @@ class UrlwatchCommand:
         if job_state:  # we want a full report
             for cfg in cfgs:
                 cfg['enabled'] = True
-            self.urlwatcher.config_storage.config['display'][label] = True  # ty:ignore[invalid-key]
+            self.urlwatcher.config_storage.config['display'][label] = True  # ty:ignore[non-literal-typed-dict-key]
             self.urlwatcher.config_storage.config['report']['text']['details'] = True
             self.urlwatcher.config_storage.config['report']['text']['footer'] = True
             self.urlwatcher.config_storage.config['report']['text']['minimal'] = False

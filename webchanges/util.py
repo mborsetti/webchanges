@@ -71,7 +71,7 @@ class TrackSubClasses(type):
     """A metaclass that stores subclass name-to-class mappings in the base class."""
 
     # __subclasses__ gets redefined from default "Callable[[_TT], list[_TT]]
-    __subclasses__: dict[str, TrackSubClasses]  # ty:ignore[invalid-attribute-override]
+    __subclasses__: dict[str, TrackSubClasses]  # ty:ignore[incompatible-attribute-override]
     __anonymous_subclasses__: list[TrackSubClasses]
     __required__: tuple[str, ...] = ()
     __optional__: tuple[str, ...] = ()

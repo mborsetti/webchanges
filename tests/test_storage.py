@@ -542,14 +542,14 @@ def test_keep_latest(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0003)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -586,14 +586,14 @@ def test_clean(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -626,7 +626,7 @@ def test_gc(database_engine: SsdbStorage) -> None:
     # run once
     urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
     ssdb_storage.gc([])
     guid = urlwatcher.jobs[0].get_guid()
@@ -653,7 +653,7 @@ def test_gc_delete_1_of_2(database_engine: SsdbStorage) -> None:
             time.sleep(0.0001)
         urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
     guid = urlwatcher.jobs[0].get_guid()
     ssdb_storage.gc([guid])
@@ -691,7 +691,7 @@ def test_gc_delete_2_of_4(database_engine: SsdbStorage) -> None:
             time.sleep(0.0001)
         urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
     guid = urlwatcher.jobs[0].get_guid()
     ssdb_storage.gc([guid], 2)
@@ -720,7 +720,7 @@ def test_clean_ssdb(database_engine: SsdbStorage) -> None:
                 time.sleep(0.0001)
             urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
@@ -760,7 +760,7 @@ def test_clean_and_delete(database_engine: SsdbStorage) -> None:
     # run once
     urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
     # clean guid
     guid = urlwatcher.jobs[0].get_guid()
@@ -795,14 +795,14 @@ def test_clean_all(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -835,14 +835,14 @@ def test_clean_ssdb_no_clean_all(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -875,14 +875,14 @@ def test_delete_latest(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -895,7 +895,7 @@ def test_delete_latest(database_engine: SsdbStorage) -> None:
 
         assert num_del == 1
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 1
 
@@ -926,7 +926,7 @@ def test_rollback_ssdb(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         run_time = time.time()
 
         # run twice
@@ -934,7 +934,7 @@ def test_rollback_ssdb(database_engine: SsdbStorage) -> None:
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -947,7 +947,7 @@ def test_rollback_ssdb(database_engine: SsdbStorage) -> None:
 
         assert num_del == 1
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 1
 
@@ -964,7 +964,7 @@ def test_restore_and_backup(database_engine: SsdbStorage) -> None:
 
     ssdb_storage.restore((('myguid', 'mydata', 1618105974, 0, '', mime_type, {}),))  # ty:ignore[invalid-argument-type]
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
     entry = ssdb_storage.load('myguid')
     assert entry == Snapshot('mydata', 1618105974, 0, '', mime_type, {})
@@ -985,7 +985,7 @@ def test_get_empty_history_and_no_max_snapshots(database_engine: SsdbStorage) ->
     # run once
     urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
     # get rich_history
     guid = urlwatcher.jobs[0].get_guid()
@@ -1015,14 +1015,14 @@ def test_clean_and_history_data(database_engine: SsdbStorage) -> None:
         # run once
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
         # run twice
         if isinstance(database_engine, SsdbSQLite3Storage):
             time.sleep(0.0001)
         urlwatcher.run_jobs()
         if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+            ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
         guid = urlwatcher.jobs[0].get_guid()
         history = ssdb_storage.get_history_data(guid)
         assert len(history) == 2
@@ -1088,7 +1088,7 @@ def test_abstractmethods() -> None:
         filename: Path
 
     filename = Path('test')
-    d = DummyBaseTextualFileStorage(filename)  # ty:ignore[call-non-callable]
+    d = DummyBaseTextualFileStorage(filename)  # ty:ignore[abstract-class-instantiation]
     assert d.load() is None
     assert d.save() is None
     assert d.parse(Path()) is None
@@ -1100,7 +1100,7 @@ def test_abstractmethods() -> None:
         filename: Path
 
     filename = Path('test')
-    dummy_ssdb = DummySsdbStorage(filename)  # ty:ignore[call-non-callable]
+    dummy_ssdb = DummySsdbStorage(filename)  # ty:ignore[abstract-class-instantiation]
     assert dummy_ssdb.close() is None
     assert dummy_ssdb.get_guids() is None
     assert dummy_ssdb.load('guid') is None

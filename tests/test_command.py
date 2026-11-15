@@ -368,7 +368,7 @@ def test_dump_history(time_jobs_urlwatcher: Urlwatch, capsys: pytest.CaptureFixt
     # run once
     urlwatcher.urlwatch_config.dump_history = None
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     urlwatcher.urlwatch_config.joblist = []
 
     urlwatcher.urlwatch_config.dump_history = '1'
@@ -407,7 +407,7 @@ def test_test_differ_and_joblist(time_jobs_urlwatcher: Urlwatch, capsys: pytest.
     urlwatcher.urlwatch_config.test_differ = None
     urlwatcher.urlwatch_config.joblist = ['1']
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     urlwatcher.urlwatch_config.joblist = []
 
     urlwatcher.urlwatch_config.test_differ = ['1', '1']
@@ -429,7 +429,7 @@ def test_test_differ_and_joblist(time_jobs_urlwatcher: Urlwatch, capsys: pytest.
     # run twice
     time.sleep(0.0001)
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     assert len(urlwatcher.ssdb_storage.get_history_data(urlwatcher.jobs[0].guid)) == 2
 
     # diff (unified) with diff_filter, tz, contextlines
@@ -773,7 +773,7 @@ def test_modify_urls_move_location(
     command_config2.change_location = None
     urlwatcher2.run_jobs()
     if hasattr(ssdb_storage2, '_copy_temp_to_permanent'):
-        ssdb_storage2._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage2._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
     # change saved job's database location
     command_config2.change_location = old_loc, new_loc
@@ -882,14 +882,14 @@ def test_delete_snapshot(
     # run once
     urlwatcher.urlwatch_config.delete_snapshot = None
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     guid = urlwatcher.jobs[0].guid
     assert len(urlwatcher.ssdb_storage.get_history_data(guid)) == 1
 
     # run twice
     time.sleep(0.0001)
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     assert len(urlwatcher.ssdb_storage.get_history_data(guid)) == 2
 
     # delete once
@@ -940,7 +940,7 @@ def test_gc_database(
 
     # run once to save the job from 'jobs-time.yaml'
     urlwatcher.run_jobs()
-    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[unresolved-attribute]
+    urlwatcher.ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[missing-attribute]
     assert len(urlwatcher.ssdb_storage.get_history_data(guid)) == 1
 
     # build a second urlwatcher pointing at echo_test.yaml but sharing the same ssdb
@@ -994,7 +994,7 @@ def test_clean_database(
         time.sleep(0.0001)
         urlwatch_command2.urlwatcher.run_jobs()
     if hasattr(ssdb_storage2, '_copy_temp_to_permanent'):
-        ssdb_storage2._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage2._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
 
     urlwatch_command2.urlwatch_config.clean_database = 2
     urlwatcher2.ssdb_storage.clean_ssdb(
@@ -1051,12 +1051,12 @@ def test_rollback_database_confirmation(
 
     urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
     cutoff = ssdb_storage.get_history_snapshots(guid)[0].timestamp - 1
     time.sleep(0.0001)
     urlwatcher.run_jobs()
     if hasattr(ssdb_storage, '_copy_temp_to_permanent'):
-        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[call-non-callable]
+        ssdb_storage._copy_temp_to_permanent(delete=True)  # ty:ignore[not-callable]
     assert len(ssdb_storage.get_history_snapshots(guid)) == 2
 
     # pretend we are on a terminal so that the confirmation prompt is shown
@@ -1197,7 +1197,7 @@ def test_check_smtp_login_not_config(
     urlwatch_command: UrlwatchCommand,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    urlwatch_command.urlwatcher.config_storage.config['report']['email'].update(  # ty:ignore[unresolved-attribute]
+    urlwatch_command.urlwatcher.config_storage.config['report']['email'].update(  # ty:ignore[missing-union-attribute]
         {
             'enabled': True,
             'method': 'sendmail',
@@ -1226,7 +1226,7 @@ def test_check_smtp_insecure_password(
     urlwatch_command: UrlwatchCommand,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    urlwatch_command.urlwatcher.config_storage.config['report']['email'].update(  # ty:ignore[unresolved-attribute]
+    urlwatch_command.urlwatcher.config_storage.config['report']['email'].update(  # ty:ignore[missing-union-attribute]
         {
             'enabled': True,
             'method': 'smtp',

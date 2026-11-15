@@ -1716,7 +1716,7 @@ class ImageDiffer(DifferBase):
                 img_byte_arr = BytesIO()
                 image.save(img_byte_arr, format=image.format)
                 image_data = img_byte_arr.getvalue()
-                mime_type = f'image/{image.format.lower()}'  # ty:ignore[unresolved-attribute]
+                mime_type = f'image/{image.format.lower()}'  # ty:ignore[missing-union-attribute]
 
                 logger.info(
                     'Job %s: Loading %s (%s) to Google AI (%.0f kbytes)',
@@ -2286,7 +2286,7 @@ class AIGoogleDiffer(DifferBase):
         report_kind: ReportKind,
         _unfiltered_diff: dict[ReportKind, str] | None = None,
         tz: tzinfo | None = None,
-    ) -> dict[ReportKind, str]:  # ty:ignore[invalid-method-override]
+    ) -> dict[ReportKind, str]:  # ty:ignore[incompatible-method-override]
         """Generate the AI summary of the changes."""
         logger.info('Job %s: Running the %s differ from hooks.py', self.job.index_number, self.__kind__)
         # warnings.warn(

@@ -40,7 +40,7 @@ class IFTTTReport(TextReporter):
 
     config: _ConfigReportIfttt
 
-    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[incompatible-method-override]
         webhook_url = 'https://maker.ifttt.com/trigger/{event}/with/key/{key}'.format(**self.config)
         # One client for all the jobs: a closed httpx2 client cannot be reopened
         with self.http_client as http_client:
@@ -74,7 +74,7 @@ class WebServiceReporter(TextReporter):
     def web_service_submit(self, service: str | chump.User, title: str, body: str) -> None:
         raise NotImplementedError
 
-    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[incompatible-method-override]
         text = '\n'.join(super().submit())
 
         if not text:
@@ -110,7 +110,7 @@ class PushoverReport(WebServiceReporter):
         app = chump.Application(self.config['app'])
         return app.get_user(self.config['user'])
 
-    def web_service_submit(self, service: chump.User, title: str, body: str) -> None:  # ty:ignore[invalid-method-override]
+    def web_service_submit(self, service: chump.User, title: str, body: str) -> None:  # ty:ignore[incompatible-method-override]
         import chump  # availability already checked by web_service_get()
 
         sound = self.config['sound']
@@ -168,7 +168,7 @@ class WebhookReporter(TextReporter):
         else:
             self.max_length = default_max_length
 
-    def submit(self) -> Response | None:  # ty:ignore[invalid-method-override]
+    def submit(self) -> Response | None:  # ty:ignore[incompatible-method-override]
         webhook_url = self.config['webhook_url']
 
         if self.config['markdown']:
@@ -278,7 +278,7 @@ class DiscordReporter(TextReporter):
         if self.config['colored']:
             self.max_length -= 11
 
-    def submit(self) -> Response | None:  # ty:ignore[invalid-method-override]
+    def submit(self) -> Response | None:  # ty:ignore[incompatible-method-override]
         webhook_url = self.config['webhook_url']
         text = '\n'.join(super().submit())
 
@@ -351,7 +351,7 @@ class ProwlReporter(TextReporter):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def submit(self) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self) -> None:  # ty:ignore[incompatible-method-override]
         api_add = 'https://api.prowlapp.com/publicapi/add'
 
         text = '\n'.join(super().submit())
@@ -406,7 +406,7 @@ class NtfyReporter(TextReporter):
 
     config: _ConfigReportNtfy
 
-    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[incompatible-method-override]
         """Publish one message per job to the ntfy topic.
 
         A failed publication is logged and does not stop the others; the first error is raised once all jobs have

@@ -49,7 +49,7 @@ class TelegramReporter(MarkdownReporter):
 
     config: _ConfigReportTelegram
 
-    def submit(self, max_length: int = 4096, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self, max_length: int = 4096, **kwargs: Any) -> None:  # ty:ignore[incompatible-method-override]
         """Submit report."""
         bot_token = self.config['bot_token'] or os.environ.get('TELEGRAM_BOT_TOKEN')
         if bot_token is None:
@@ -244,7 +244,7 @@ class MatrixReporter(MarkdownReporter):
     config: _ConfigReportMatrix
     MAX_LENGTH = 16384
 
-    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # ty:ignore[incompatible-method-override]
         try:
             import matrix_client.api
         except ImportError as e:  # pragma: no cover
@@ -368,7 +368,7 @@ class XMPPReporter(TextReporter):
     config: _ConfigReportXmpp
     MAX_LENGTH = 262144
 
-    def submit(self) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self) -> None:  # ty:ignore[incompatible-method-override]
         sender = self.config['sender']
         recipient = self.config['recipient']
 
@@ -391,7 +391,7 @@ class GotifyReporter(MarkdownReporter):
 
     config: _ConfigReportGotify
 
-    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self, max_length: int | None = None, **kwargs: Any) -> None:  # ty:ignore[incompatible-method-override]
         body_markdown = '\n'.join(super().submit(self.MAX_LENGTH))
         if not body_markdown:
             logger.debug('Not sending message to gotify server (no changes)')

@@ -181,7 +181,7 @@ class ReporterBase(metaclass=TrackSubClasses):
         :returns: The typecasted object.
         """
         if hasattr(othercls, '__kind__'):
-            config: _ConfigReportersList = self.report.config['report'][othercls.__kind__]  # ty:ignore[invalid-key]
+            config: _ConfigReportersList = self.report.config['report'][othercls.__kind__]  # ty:ignore[non-literal-typed-dict-key]
         else:
             config = cast('_ConfigReportersList', {})
 
@@ -199,7 +199,7 @@ class ReporterBase(metaclass=TrackSubClasses):
     def get_base_config(cls, report: Report) -> dict[str, Any]:
         """Gets the configuration of the base of the report (e.g. for stdout, it will be text)."""
         report_class: ReporterBase = cls.mro()[-3]  # ty:ignore[invalid-assignment]
-        base_config: dict[str, Any] = report.config['report'][report_class.__kind__]  # ty:ignore[invalid-key]
+        base_config: dict[str, Any] = report.config['report'][report_class.__kind__]  # ty:ignore[non-literal-typed-dict-key]
         return base_config
 
     def subject_with_args(self, filtered_job_states: list[JobState], subject: str = '') -> str:
@@ -293,7 +293,7 @@ class ReporterBase(metaclass=TrackSubClasses):
                 continue
             any_enabled = True
             logger.info('Submitting with %s (%s)', name, subclass)
-            base_config = subclass.get_base_config(report)  # ty:ignore[unresolved-attribute]
+            base_config = subclass.get_base_config(report)  # ty:ignore[missing-attribute]
             reported_states = filter_by_tags(job_states, cfg.get('tags')) if apply_tags else job_states
             if not reported_states and job_states:
                 logger.info('Reporter %s reports on no job, as none has any of its tags: %s', name, cfg.get('tags'))

@@ -239,7 +239,7 @@ def test_reporter_documented(kind: str) -> None:
     section = sections[kind]
     undocumented = {
         key
-        for key in DEFAULT_CONFIG['report'][kind]  # ty:ignore[invalid-key]
+        for key in DEFAULT_CONFIG['report'][kind]  # ty:ignore[non-literal-typed-dict-key]
         if key != 'enabled' and f'``{key}``' not in section and not re.search(rf'^\s*{key}:', section, re.MULTILINE)
     }
     assert undocumented == set()

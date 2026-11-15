@@ -82,7 +82,7 @@ class StdoutReporter(TextReporter):
     def _blue(self, s: str) -> str:
         return self._incolor(4, s)
 
-    def submit(self, **kwargs: Any) -> None:  # ty:ignore[invalid-method-override]
+    def submit(self, **kwargs: Any) -> None:  # ty:ignore[incompatible-method-override]
         cfg = self.get_base_config(self.report)
         line_length = cfg['line_length']
 
