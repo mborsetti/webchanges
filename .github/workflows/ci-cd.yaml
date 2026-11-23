@@ -106,7 +106,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       # PyYAML had no Python 3.15 wheels, so it was built from source, and on Windows building its optional libyaml C
-      # extension fails the install; PYYAML_FORCE_LIBYAML=0 builds the pure-Python version instead. It goes to
+      # extension failed the install; PYYAML_FORCE_LIBYAML=0 built the pure-Python version instead. It went to
       # $GITHUB_ENV because a plain `$env:` assignment would not outlive this step.
       # - name: Build PyYAML without libyaml (Windows w/Python 3.15 and 3.15t)
       #   if: ${{ runner.os == 'Windows' && startsWith(matrix.python-version, '3.15') }}

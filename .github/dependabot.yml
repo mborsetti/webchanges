@@ -18,3 +18,8 @@ updates:
     schedule:
       interval: weekly
       day: friday
+    groups:
+      # All steps using github/codeql-action (init, analyze, ...) must be at the same version, or CodeQL fails
+      codeql-action:
+        patterns:
+          - github/codeql-action*

@@ -20,6 +20,9 @@ default_language_version:
 # pre-commit.ci (https://pre-commit.ci): send autoupdate PRs to the development branch so they can be merged directly
 ci:
     autoupdate_branch: unreleased
+    # Local hooks that only run on Mike's Windows machine: ty is `language: system` (not in pre-commit.ci's image, and
+    # ty.toml points at the Windows system Python) and cli-help runs `cmd`
+    skip: [ty, cli-help]
 
 # A list of repository mappings.
 repos:

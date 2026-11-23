@@ -12,7 +12,7 @@ pre-commit
 ruff
 # tox
 # tox-uv-bare
-ty
+# ty: not installed here, so that the ty hook (language: system) runs the system ty, as it does on `git commit`
 types-backports
 types-docutils
 types-psutil
