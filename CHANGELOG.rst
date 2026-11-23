@@ -36,9 +36,9 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
-Version 3.40.1rc0
+Version 3.40.1
 -------------------
-Unreleased
+2026-11-23
 
 Removed
 ```````
