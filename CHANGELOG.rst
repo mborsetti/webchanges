@@ -36,6 +36,23 @@ can check out the `wish list <https://github.com/mborsetti/webchanges/blob/main/
    Internals, for changes that don't affect users. [triggers a minor patch]
 
 
+Version 3.40.1rc0
+-------------------
+Unreleased
+
+Removed
+```````
+* Installation on Windows with Python 3.15: The extra step of setting ``PYYAML_FORCE_LIBYAML=0`` is no longer needed,
+  as PyYAML now publishes ready-made packages for Python 3.15.
+* ``deepdiff`` and ``deepdiff_xml`` extras: No longer limited to ``deepdiff`` < 9.1 on Python 3.15, as the ``cachebox``
+  package that newer versions require now installs there.
+
+Internals
+`````````
+* Updated the vendored fallback copies of ``typeguard`` from v4.6.0 to v4.6.1 (``ReadOnly`` items of a ``TypedDict``
+  are now type-checked) and of ``httpx2``'s ``Headers`` class from v2.16.0 to v2.16.2 (type annotations only).
+
+
 Version 3.40.0
 -------------------
 2026-11-15

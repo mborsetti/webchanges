@@ -1,7 +1,7 @@
 """
-Vendored version of the httpx2.Headers class from httpx2 v2.16.0 released on 2026-10-21
-https://github.com/pydantic/httpx2/releases/tag/v2.16.0.
-(code https://github.com/pydantic/httpx2/tree/6bfbf296bd87891287b3b0335493c7317be4ef18/src/httpx2/httpx2).
+Vendored version of the httpx2.Headers class from httpx2 v2.16.2 released on 2026-11-16
+https://github.com/pydantic/httpx2/releases/tag/v2.16.2.
+(code https://github.com/pydantic/httpx2/tree/781ea16caf2a5ade6e18b7504b3fe62fe902c4fa/src/httpx2/httpx2).
 
 Allows us to load this class in case neither httpx2 nor httpx is installed.
 """
@@ -32,11 +32,10 @@ Allows us to load this class in case neither httpx2 nor httpx is installed.
 
 from __future__ import annotations
 
-import typing
-from collections.abc import Mapping, Sequence
-from typing import Union
+from collections.abc import ItemsView, Iterable, Iterator, KeysView, Mapping, MutableMapping, Sequence, ValuesView
+from typing import Any, Self, TypeVar, Union, overload
 
-# from https://github.com/pydantic/httpx2/blob/6bfbf296bd87891287b3b0335493c7317be4ef18/src/httpx2/httpx2/_types.py
+# from https://github.com/pydantic/httpx2/blob/781ea16caf2a5ade6e18b7504b3fe62fe902c4fa/src/httpx2/httpx2/_types.py
 HeaderTypes = Union[
     "Headers",
     Mapping[str, str],
@@ -45,20 +44,22 @@ HeaderTypes = Union[
     Sequence[tuple[bytes, bytes]],
 ]
 
+AnyStr = TypeVar("AnyStr", bytes, str)
 
-# from https://github.com/pydantic/httpx2/blob/6bfbf296bd87891287b3b0335493c7317be4ef18/src/httpx2/httpx2/_utils.py
+
+# from https://github.com/pydantic/httpx2/blob/781ea16caf2a5ade6e18b7504b3fe62fe902c4fa/src/httpx2/httpx2/_utils.py
 def to_str(value: str | bytes, encoding: str = "utf-8") -> str:
     return value if isinstance(value, str) else value.decode(encoding)
 
 
-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:
+def to_bytes_or_str(value: str, match_type_of: AnyStr) -> AnyStr:
     return value if isinstance(match_type_of, str) else value.encode()  # ty:ignore[invalid-explicit-return]
 
 
-# from https://github.com/pydantic/httpx2/blob/6bfbf296bd87891287b3b0335493c7317be4ef18/src/httpx2/httpx2/_models.py
+# from https://github.com/pydantic/httpx2/blob/781ea16caf2a5ade6e18b7504b3fe62fe902c4fa/src/httpx2/httpx2/_models.py
 SENSITIVE_HEADERS = {"authorization", "proxy-authorization"}
 
-_T = typing.TypeVar("_T")
+_T = TypeVar("_T")
 
 
 def _normalize_header_key(key: str | bytes, encoding: str | None = None) -> bytes:
@@ -80,15 +81,15 @@ def _normalize_header_value(value: str | bytes, encoding: str | None = None) -> 
 
 
 def _obfuscate_sensitive_headers(
-    items: typing.Iterable[tuple[typing.AnyStr, typing.AnyStr]],
-) -> typing.Iterator[tuple[typing.AnyStr, typing.AnyStr]]:
+    items: Iterable[tuple[AnyStr, AnyStr]],
+) -> Iterator[tuple[AnyStr, AnyStr]]:
     for k, v in items:
         if to_str(k.lower()) in SENSITIVE_HEADERS:
             v = to_bytes_or_str("[secure]", match_type_of=v)
         yield k, v
 
 
-class Headers(typing.MutableMapping[str, str]):
+class Headers(MutableMapping[str, str]):
     """
     HTTP headers, as a case-insensitive multi-dict.
     """
@@ -151,10 +152,10 @@ class Headers(typing.MutableMapping[str, str]):
         """
         return [(raw_key, value) for raw_key, _, value in self._list]
 
-    def keys(self) -> typing.KeysView[str]:
+    def keys(self) -> KeysView[str]:
         return {key.decode(self.encoding): None for _, key, _value in self._list}.keys()
 
-    def values(self) -> typing.ValuesView[str]:
+    def values(self) -> ValuesView[str]:
         values_dict: dict[str, str] = {}
         for _, key, value in self._list:
             str_key = key.decode(self.encoding)
@@ -165,7 +166,7 @@ class Headers(typing.MutableMapping[str, str]):
                 values_dict[str_key] = str_value
         return values_dict.values()
 
-    def items(self) -> typing.ItemsView[str, str]:
+    def items(self) -> ItemsView[str, str]:
         """
         Return `(key, value)` items of headers. Concatenate headers
         into a single comma separated value when a key occurs multiple times.
@@ -188,10 +189,10 @@ class Headers(typing.MutableMapping[str, str]):
         """
         return [(key.decode(self.encoding), value.decode(self.encoding)) for _, key, value in self._list]
 
-    @typing.overload
+    @overload
     def get(self, key: str, /) -> str | None: ...
 
-    @typing.overload
+    @overload
     def get(self, key: str, default: _T) -> str | _T: ...
 
     def get(self, key: str, default: _T | None = None) -> str | _T | None:  # ty:ignore[incompatible-method-override]
@@ -250,7 +251,7 @@ class Headers(typing.MutableMapping[str, str]):
         merged.update(self)
         return merged
 
-    def __ior__(self, other: HeaderTypes) -> Headers:
+    def __ior__(self, other: HeaderTypes) -> Self:
         self.update(other)
         return self
 
@@ -308,19 +309,19 @@ class Headers(typing.MutableMapping[str, str]):
         for idx in reversed(pop_indexes):
             del self._list[idx]
 
-    def __contains__(self, key: typing.Any) -> bool:
+    def __contains__(self, key: Any) -> bool:
         header_key = key.lower().encode(self.encoding)
         return header_key in [key for _, key, _ in self._list]
 
-    def __iter__(self) -> typing.Iterator[typing.Any]:
+    def __iter__(self) -> Iterator[Any]:
         return iter(self.keys())
 
     def __len__(self) -> int:
         return len(self._list)
 
-    def __eq__(self, other: typing.Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         try:
-            other_headers = Headers(other)
+            other_headers = Headers(other)  # ty:ignore[invalid-argument-type]
         except ValueError:
             return False
 

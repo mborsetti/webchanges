@@ -1,7 +1,7 @@
 """
-Vendored version of typeguard._functions.check_type() from typeguard v4.6.0 released on 26-Jul-26
-https://github.com/agronholm/typeguard/releases/tag/4.6.0.
-(code https://github.com/agronholm/typeguard/tree/9f289c7fca68097542d3bde9d59496ad42e58251).
+Vendored version of typeguard._functions.check_type() from typeguard v4.6.1 released on 19-Nov-26
+https://github.com/agronholm/typeguard/releases/tag/4.6.1.
+(code https://github.com/agronholm/typeguard/tree/db41f442fa952fdba5e5b1381e26d5a6be7853c4).
 
 Allows us to load this function in case typeguard is not installed.
 """
@@ -244,7 +244,7 @@ class TypeCheckMemo:
          Contains the configuration for a particular set of type checking operations.
     """
 
-    __slots__ = "globals", "locals", "self_type", "config"
+    __slots__ = "config", "globals", "locals", "self_type"
 
     def __init__(
         self,
@@ -368,6 +368,11 @@ if sys.version_info >= (3, 15):
 else:
     from typing_extensions import NoExtraItems
 
+if sys.version_info >= (3, 13):
+    from typing import ReadOnly
+else:
+    from typing_extensions import ReadOnly
+
 if sys.version_info >= (3, 11):
     from typing import (
         NotRequired,
@@ -475,9 +480,8 @@ def check_mapping(
     args: tuple[Any, ...],
     memo: TypeCheckMemo,
 ) -> None:
-    if origin_type is Dict or origin_type is dict:
-        if not isinstance(value, dict):
-            raise TypeCheckError("is not a dict")
+    if (origin_type is Dict or origin_type is dict) and not isinstance(value, dict):
+        raise TypeCheckError("is not a dict")
     if origin_type is MutableMapping or origin_type is collections.abc.MutableMapping:
         if not isinstance(value, collections.abc.MutableMapping):
             raise TypeCheckError("is not a mutable mapping")
@@ -539,12 +543,21 @@ def check_typed_dict(
         if isinstance(annotation, ForwardRef):
             annotation = evaluate_forwardref(annotation, memo)
 
-        if get_origin(annotation) is NotRequired:
-            required_keys.discard(key)
-            annotation = get_args(annotation)[0]
-        elif get_origin(annotation) is Required:
-            required_keys.add(key)
-            annotation = get_args(annotation)[0]
+        # Strip the NotRequired/Required/ReadOnly qualifiers (in any nesting
+        # order) so the underlying type is actually checked. ReadOnly (PEP 705)
+        # was previously left wrapped, which silently skipped type checking.
+        while True:
+            origin = get_origin(annotation)
+            if origin is NotRequired:
+                required_keys.discard(key)
+                annotation = get_args(annotation)[0]
+            elif origin is Required:
+                required_keys.add(key)
+                annotation = get_args(annotation)[0]
+            elif origin is ReadOnly:
+                annotation = get_args(annotation)[0]
+            else:
+                break
 
         type_hints[key] = annotation
 
@@ -771,13 +784,12 @@ def check_class(
                     return
                 except TypeCheckError as exc:
                     errors[get_type_name(arg)] = exc
-            else:
-                formatted_errors = indent(
-                    "\n".join(f"{key}: {error}" for key, error in errors.items()), "  "
-                )
-                raise TypeCheckError(
-                    f"did not match any element in the union:\n{formatted_errors}"
-                )
+            formatted_errors = indent(
+                "\n".join(f"{key}: {error}" for key, error in errors.items()), "  "
+            )
+            raise TypeCheckError(
+                f"did not match any element in the union:\n{formatted_errors}"
+            )
         finally:
             del errors  # avoid creating ref cycle
     else:
@@ -1074,29 +1086,31 @@ def check_signature_compatible(subject: type, protocol: type, attrname: str) -> 
         for param in subject_sig.parameters.values()
         if param.kind is Parameter.KEYWORD_ONLY
     }
-    if not subject_has_varkwargs:
-        # Check that the signature has at least the required keyword-only arguments, and
-        # no extra mandatory keyword-only arguments
-        if missing_kwonlyargs := [
+    # Check that the signature has at least the required keyword-only arguments, and
+    # no extra mandatory keyword-only arguments
+    if not subject_has_varkwargs and (
+        missing_kwonlyargs := [
             param.name
             for param in protocol_kwonlyargs.values()
             if param.name not in subject_kwonlyargs
-        ]:
-            raise TypeCheckError(
-                "is missing keyword-only arguments: " + ", ".join(missing_kwonlyargs)
-            )
+        ]
+    ):
+        raise TypeCheckError(
+            "is missing keyword-only arguments: " + ", ".join(missing_kwonlyargs)
+        )
 
-    if not protocol_has_varkwargs:
-        if extra_kwonlyargs := [
+    if not protocol_has_varkwargs and (
+        extra_kwonlyargs := [
             param.name
             for param in subject_kwonlyargs.values()
             if param.default is Parameter.empty
             and param.name not in protocol_kwonlyargs
-        ]:
-            raise TypeCheckError(
-                "has mandatory keyword-only arguments not present in the protocol: "
-                + ", ".join(extra_kwonlyargs)
-            )
+        ]
+    ):
+        raise TypeCheckError(
+            "has mandatory keyword-only arguments not present in the protocol: "
+            + ", ".join(extra_kwonlyargs)
+        )
 
 
 def check_protocol(

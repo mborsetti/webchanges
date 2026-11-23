@@ -24,7 +24,7 @@ import operator
 import pickle
 import sys
 import typing
-from copy import replace  # ty:ignore[import-not-found]
+from copy import replace  # ty:ignore[missing-module-member]
 from pathlib import Path
 
 import pytest

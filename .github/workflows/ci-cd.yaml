@@ -39,7 +39,7 @@ jobs:
       skip: ${{ steps.tagged.outputs.skip }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -81,7 +81,7 @@ jobs:
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -101,17 +101,17 @@ jobs:
       # and https://docs.astral.sh/uv/guides/integration/github
       # Caching is enabled on GitHub-hosted runners
       - name: Set up uv
-        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: ${{ matrix.python-version }}
 
-      # PyYAML has no Python 3.15 wheels, so it is built from source, and on Windows building its optional libyaml C
+      # PyYAML had no Python 3.15 wheels, so it was built from source, and on Windows building its optional libyaml C
       # extension fails the install; PYYAML_FORCE_LIBYAML=0 builds the pure-Python version instead. It goes to
       # $GITHUB_ENV because a plain `$env:` assignment would not outlive this step.
-      - name: Build PyYAML without libyaml (Windows w/Python 3.15 and 3.15t)
-        if: ${{ runner.os == 'Windows' && startsWith(matrix.python-version, '3.15') }}
-        shell: pwsh
-        run: Add-Content -Path $env:GITHUB_ENV -Value 'PYYAML_FORCE_LIBYAML=0'
+      # - name: Build PyYAML without libyaml (Windows w/Python 3.15 and 3.15t)
+      #   if: ${{ runner.os == 'Windows' && startsWith(matrix.python-version, '3.15') }}
+      #   shell: pwsh
+      #   run: Add-Content -Path $env:GITHUB_ENV -Value 'PYYAML_FORCE_LIBYAML=0'
 
       - name: Install redis, pdf2text and ocr dependencies (Linux w/latest Python)
         # Redis easily installable on Ubuntu
@@ -225,7 +225,7 @@ jobs:
       # Coveralls names a build after the ref that triggered the run, which for a release is the tag, as the branch
       # runs skip their tests (see check-skip); a tag run is therefore reported as main, so that main's page updates.
       - name: Upload coverage data to coveralls.io (parallel)
-        uses: coverallsapp/github-action@5cbfd81b66ca5d10c19b062c04de0199c215fb6e # v2.3.7
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
         with:
           github-token: ${{ secrets.github_token }}
           file: coverage.xml
@@ -248,7 +248,7 @@ jobs:
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -316,12 +316,12 @@ jobs:
     continue-on-error: true
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
       with:
         egress-policy: audit
 
     - name: Coveralls parallel finished
-      uses: coverallsapp/github-action@5cbfd81b66ca5d10c19b062c04de0199c215fb6e # v2.3.7
+      uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
       with:
         github-token: ${{ secrets.github_token }}
         parallel-finished: true
@@ -337,7 +337,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -374,7 +374,7 @@ jobs:
       # and https://docs.astral.sh/uv/guides/integration/github
       # Caching is enabled on GitHub-hosted runners
       - name: Set up uv
-        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       # Build using uv https://docs.astral.sh/uv/concepts/projects/build/
       - name: Build dist
@@ -385,7 +385,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # V3.0.0
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # V3.0.4
         with:
           body_path: RELEASE.md
           draft: false
