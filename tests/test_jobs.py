@@ -2659,7 +2659,7 @@ class _ScriptedHandler(BaseHTTPRequestHandler):
         if self.path == '/cookies':
             status, content_type, body, extra = 200, 'text/plain', (self.headers.get('Cookie') or '').encode(), {}
         elif self.path == '/redirect-to-localhost':  # to '/cookies' on another host
-            port = self.headers['Host'].split(':')[1]
+            port = self.connection.getsockname()[1]
             status, content_type, body, extra = 302, None, b'', {'Location': f'http://localhost:{port}/cookies'}
         else:
             status, content_type, body, extra = self.ROUTES[self.path]

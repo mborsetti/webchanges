@@ -511,8 +511,11 @@ class BrowserJob(UrlJobBase):
         proxy_str = self.get_proxy()
         if proxy_str is not None:
             proxy: ProxySettings | None = _proxy_settings(proxy_str)
-            proxy_for_logging = proxy.copy()
-            if proxy_for_logging.get('password'):
+            # built without reading the password, so that it can never reach the log
+            proxy_for_logging: dict[str, str | None] = {'server': proxy['server']}
+            if 'username' in proxy:
+                proxy_for_logging['username'] = proxy['username']
+            if 'password' in proxy:
                 proxy_for_logging['password'] = '*******'  # noqa: S105 possible hardcoded password
             logger.debug('Job %s: Proxy: %s', self.index_number, proxy_for_logging)
         else:
